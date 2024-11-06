@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
 
 app.get('/ping', async (req, res) => {
     const result = await pool.query('SELECT * FROM usuarios')
-    console.log(result.rows)
+    return res.json(result.rows)
 });
 
 app.listen(3000)
