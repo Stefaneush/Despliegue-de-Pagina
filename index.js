@@ -12,10 +12,7 @@ const pool = new pg.Pool({
 
 })
 
-app.get('/', async (req, res) => {
-    const result = await pool.query('SELECT * FROM usuarios')
-    return res.json(result.rows)
-});
+
 
 app.listen(3000)
 console.log("server on port ", 3000)
