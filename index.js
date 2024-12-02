@@ -14,12 +14,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Middleware para analizar los datos de los formularios
+// Middleware para analizar los datos de los formularios //NUEVO
 app.use(express.urlencoded({ extended: true }));
-
-
-// Servir archivos estáticos desde la carpeta "public" //NUEVO
-app.use(express.static('public'));
 
 const pool = new pg.Pool({
     
