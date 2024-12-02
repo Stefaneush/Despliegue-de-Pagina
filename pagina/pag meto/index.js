@@ -17,24 +17,43 @@ const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL
 });
 
+// Crear tabla de usuarios si no existe
+const crearTablaUsuarios = async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                correo VARCHAR(100) UNIQUE NOT NULL,
+                celular VARCHAR(20) NOT NULL
+            )
+        `);
+        console.log('Tabla de usuarios creada o ya existente');
+    } catch (error) {
+        console.error('Error al crear la tabla de usuarios:', error);
+    }
+};
+
+// Inicializar la tabla
+crearTablaUsuarios();
 
 // Rutas CRUD para usuarios
 
 // Crear nuevo usuario
 app.post('/usuarios', async (req, res) => {
     try {
-        const { nombre, correo, telefono } = req.body;
+        const { nombre, correo, celular } = req.body;
         
         // Validar campos obligatorios
-        if (!nombre || !correo || !telefono) {
+        if (!nombre || !correo || !celular) {
             return res.status(400).json({ 
                 error: 'Todos los campos son obligatorios' 
             });
         }
 
         const result = await pool.query(
-            'INSERT INTO usuarios (nombre, correo, telefono) VALUES ($1, $2, $3) RETURNING *',
-            [nombre, correo, telefono]
+            'INSERT INTO usuarios (nombre, correo, celular) VALUES ($1, $2, $3) RETURNING *',
+            [nombre, correo, celular]
         );
 
         res.status(201).json(result.rows[0]);
@@ -85,18 +104,18 @@ app.get('/usuarios/:id', async (req, res) => {
 app.put('/usuarios/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, correo, telefono} = req.body;
+        const { nombre, correo, celular } = req.body;
 
         // Validar campos obligatorios
-        if (!nombre || !correo || !telefono) {
+        if (!nombre || !correo || !celular) {
             return res.status(400).json({ 
                 error: 'Todos los campos son obligatorios' 
             });
         }
 
         const result = await pool.query(
-            'UPDATE usuarios SET nombre = $1, correo = $2, telefono = $3 WHERE id = $4 RETURNING *',
-            [nombre, correo, telefono, id]
+            'UPDATE usuarios SET nombre = $1, correo = $2, celular = $3 WHERE id = $4 RETURNING *',
+            [nombre, correo, celular, id]
         );
 
         if (result.rows.length === 0) {
@@ -151,7 +170,3 @@ app.listen(PORT, () => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
-
-
-app.listen(3000)
-console.log("server on port ", 3000)
