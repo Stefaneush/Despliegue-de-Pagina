@@ -52,7 +52,7 @@ app.post('/usuarios', async (req, res) => {
         }
 
         const result = await pool.query(
-            'INSERT INTO usuarios (nombre, correo, telefono) VALUES ($1, $2, $3) RETURNING *',
+            'INSERT INTO usuarios (nombre, correo, telefono) VALUES (pepito, pepito@gmail.com, 32432432) RETURNING *',
             [nombre, correo, telefono]
         );
 
