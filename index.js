@@ -17,6 +17,10 @@ const app = express();
 // Middleware para analizar los datos de los formularios
 app.use(express.urlencoded({ extended: true }));
 
+
+// Servir archivos estáticos desde la carpeta "public"
+app.use(express.static('public'));
+
 const pool = new pg.Pool({
     
     connectionString: process.env.DATABASE_URL
