@@ -18,7 +18,7 @@ app.get('/', async (req, res) => {
     res.send("principal")
 });
 
-app.get('/create', async (req, res) => {
+app.post('/create', async (req, res) => {
 
     var nombre = document.querySelector("nombre")
 
