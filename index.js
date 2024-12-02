@@ -1,9 +1,16 @@
 import express, { query } from 'express';
 import {config} from "dotenv";
 import pg from "pg";
-import path from "path"; // Para manejar rutas
+import path from "path"; // Para manejar rutas (NUEVO)
+
+import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
 
 config()
+ 
+//NUEVO
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 const app = express();
 
