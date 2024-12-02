@@ -24,28 +24,27 @@ const pool = new pg.Pool({
 app.post('/usuarios', async (req, res) => {
     try {
         const { nombre, correo, telefono } = req.body;
-        
-        // Validar campos obligatorios
+
+        // Validar datos
         if (!nombre || !correo || !telefono) {
-            return res.status(400).json({ 
-                error: 'Todos los campos son obligatorios' 
-            });
+            return res.status(400).json({ error: 'Todos los campos son obligatorios' });
         }
 
+        // Insertar usuario en la base de datos
         const result = await pool.query(
             'INSERT INTO usuarios (nombre, correo, telefono) VALUES ($1, $2, $3) RETURNING *',
             [nombre, correo, telefono]
         );
 
+        // Responder con el usuario creado
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Error al crear usuario:', error);
-        res.status(500).json({ 
-            error: 'Error al crear usuario', 
-            detalle: error.message 
-        });
+        res.status(500).json({ error: 'Error al crear usuario' });
     }
 });
+
+
 
 // Obtener todos los usuarios
 app.get('/usuarios', async (req, res) => {
