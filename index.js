@@ -3,7 +3,6 @@ import { config } from "dotenv";
 import pg from "pg";
 import bodyParser from 'body-parser';
 import cors from 'cors';
-const bodyParser = require('body-parser');
 
 // Configuración inicial
 config();
