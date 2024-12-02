@@ -32,7 +32,7 @@ app.get('/update', async (req, res) => {
 });
 
 app.get('/delete', async (req, res) => {
-    const result = await pool.query("DELETE FROM usuario WHERE id = 1;")
+    const result = await pool.query("DELETE FROM usuarios WHERE id = 3;")
     res.send("se elimino el usuario")
 });
 
