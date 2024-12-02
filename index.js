@@ -11,11 +11,7 @@ const pool =  new pg.Pool({
     connectionString: process.env.DATABASE_URL
 })
 
-app.get('/', (req, res) => {
-    res.send('¡Hola Mundo!');
-});
-
-app.get('/ping', async (req, res) => {
+app.get('/', async (req, res) => {
     const result = await pool.query('SELECT * from habitaciones')
     return res.json(result.rows[0])
 });
