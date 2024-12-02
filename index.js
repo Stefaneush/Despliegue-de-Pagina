@@ -16,7 +16,7 @@ app.get('/', async (req, res) => {
     res.send("principal")
 });
 
-app.post('/create', async (req, res) => {
+app.get('/create', async (req, res) => {
 
     const { nombre, correo, telefono } = req.body;
 
