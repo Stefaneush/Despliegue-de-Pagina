@@ -12,7 +12,7 @@ const pool = new pg.Pool({
 
 })
 
-app.post('/', async (req, res) => {
+app.get('/', async (req, res) => {
     res.send("principal")
 });
 
@@ -24,17 +24,17 @@ app.post('/create', async (req, res) => {
     res.send("se creo el usuario")
 });
 
-app.post('/select', async (req, res) => {
+app.get('/select', async (req, res) => {
     const result = await pool.query('SELECT * FROM usuarios')
     return res.json(result.rows)
 });
 
-app.post('/update', async (req, res) => {
+app.get('/update', async (req, res) => {
     const result = await pool.query("UPDATE usuarios SET nombre = 'Maurisio Hermoso', correo = 'maurisiaxd@example.com' WHERE id = 1;")
     res.send("se actualizo el usuario")
 });
 
-app.post('/delete', async (req, res) => {
+app.get('/delete', async (req, res) => {
     const result = await pool.query("DELETE FROM usuarios WHERE id = 3;")
     res.send("se elimino el usuario")
 });
