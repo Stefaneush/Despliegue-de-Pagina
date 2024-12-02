@@ -6,6 +6,7 @@ config()
 
 const app = express();
 
+// Middleware para analizar los datos de los formularios
 app.use(express.urlencoded({ extended: true }));
 
 const pool = new pg.Pool({
@@ -20,7 +21,7 @@ app.get('/', async (req, res) => {
 
 app.get('/create', async (req, res) => {
 
-    var nombre = document.querySelector("nombre")
+    const { nombre, correo, telefono } = req.body;
 
     const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono) VALUES ('$1', '$2', '$3'); " , [nombre, correo, telefono])
     res.send("se creo el usuario")
