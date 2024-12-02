@@ -723,14 +723,14 @@ footer a:hover {
                 </div>
                 <div class="modal-body">
 
-                    <form action="/create" method="post">
+                    <!-- <form action="/create" method="post" id="createUserForm">
 
                         <input type="text" name="nombre" placeholder="Nombre" required>
                         <input type="email" name="correo" placeholder="Correo" required>
                         <input type="tel" name="telefono" placeholder="Teléfono" required>
                         <button type="submit">Subir Datos</button>
 
-                    </form>
+                    </form> -->
 
 
                     <form id="createUserForm" action="/create" method="POST">
@@ -801,26 +801,6 @@ footer a:hover {
             myModal.show();
         });
 
-        // Manejar el envío del formulario
-        document.getElementById('createUserForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            var name = document.getElementById('userName').value;
-            var email = document.getElementById('userEmail').value;
-            var password = document.getElementById('userPassword').value;
-
-            // Aquí puedes agregar la lógica para enviar los datos al servidor
-            console.log('Usuario creado:', { name, email, password });
-
-            // Cerrar el modal
-            var myModal = bootstrap.Modal.getInstance(document.getElementById('createUserModal'));
-            myModal.hide();
-
-            // Limpiar el formulario
-            this.reset();
-
-            // Mostrar un mensaje de éxito (puedes personalizar esto)
-            alert('Usuario creado con éxito!');
-        });
     </script>
 </body>
 </html>
