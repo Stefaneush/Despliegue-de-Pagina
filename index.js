@@ -31,6 +31,11 @@ app.get('/update', async (req, res) => {
     res.send("se actualizo el usuario")
 });
 
+app.get('/delete', async (req, res) => {
+    const result = await pool.query("DELETE FROM usuario WHERE id = 3;")
+    res.send("se elimino el usuario")
+});
+
 
 app.listen(3000)
 console.log("server on port ", 3000)
