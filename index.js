@@ -6,6 +6,8 @@ config()
 
 const app = express();
 
+app.use(express.urlencoded({ extended: true }));
+
 const pool = new pg.Pool({
     
     connectionString: process.env.DATABASE_URL
@@ -18,7 +20,7 @@ app.get('/', async (req, res) => {
 
 app.get('/create', async (req, res) => {
 
-    const { nombre, correo, telefono } = req.body;
+    var nombre = document.querySelector("nombre")
 
     const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono) VALUES ('$1', '$2', '$3'); " , [nombre, correo, telefono])
     res.send("se creo el usuario")
