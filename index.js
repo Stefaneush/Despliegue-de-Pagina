@@ -17,7 +17,19 @@ app.get('/', async (req, res) => {
     return res.json(result.rows)
 });
 
-
+app.post('/usuarios', async (req, res) => {
+    const { id, nombre, correo, telefono} = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO usuarios (id, nombre, correo, telefono) VALUES (3, pepito, pepito@gmail.com, 3454323454) RETURNING *',
+            [id, nombre, correo, telefono]
+        );
+        return res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Error al agregar el usuario' });
+    }
+});
 
 app.listen(3000)
 console.log("server on port ", 3000)
