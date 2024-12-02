@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/ping', async (req, res) => {
-    const result = await pool.query('SELECT * from reservas')
+    const result = await pool.query('SELECT * from habitaciones')
     return res.json(result.rows[0])
 });
 
