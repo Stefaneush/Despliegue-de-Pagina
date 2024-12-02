@@ -1,19 +1,445 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="/index.js"></script>
-    <title>Document</title>
+    <title>Hotelituss - Experiencia de Lujo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <form action="/create" method="post">
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="https://th.bing.com/th/id/OIG2.BQbN5r6GvZewXhI4RZDT?w=1024&h=1024&rs=1&pid=ImgDetMain" alt="Hotelituss Logo" class="logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#inicio">Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#habitaciones">Habitaciones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#servicios">Servicios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#galeria">Galería</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#reservas">Reservas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#opiniones">Opiniones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contacto">Contacto</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-create-user" href="#" id="createUserLink">Crear Usuario</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-        <input type="text" name="nombre" placeholder="Nombre" required>
-        <input type="email" name="correo" placeholder="Correo" required>
-        <input type="tel" name="telefono" placeholder="Teléfono" required>
+    <section id="inicio" class="hero">
+        <div class="hero-overlay"></div>
+        <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src="https://www.luxsphere.co/wp-content/uploads/One-Only-the-Palm-luxury-hotel-in-dubai-1-.jpg" class="d-block w-100" alt="Luxury Hotel">
+                </div>
+                <div class="carousel-item">
+                    <img src="https://dq5r178u4t83b.cloudfront.net/wp-content/uploads/sites/125/2020/06/15182916/Sofitel-Dubai-Wafi-Luxury-Room-Bedroom-Skyline-View-Image1_WEB.jpg" class="d-block w-100" alt="Hotel Room">
+                </div>
+                <div class="carousel-item">
+                    <img src="https://media.architecturaldigest.com/photos/55e79210cd709ad62e90102f/master/pass/dam-images-travel-2015-hotel-pools-best-hotel-pools-01.jpg" class="d-block w-100" alt="Hotel Pool">
+                </div>
+            </div>
+        </div>
+        <div class="hero-content">
+            <h1 class="display-3" data-aos="fade-up">Bienvenido a Hotelituss</h1>
+            <p class="lead" data-aos="fade-up" data-aos-delay="100">Descubre el lujo y la comodidad en cada detalle</p>
+            <a href="#reservas" class="btn btn-primary btn-lg mt-3" data-aos="fade-up" data-aos-delay="200">Reservar ahora</a>
+        </div>
+    </section>
 
-        <button type="submit">Subir datos</button>
-    </form>
+    <section id="bienvenida" class="py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6" data-aos="fade-right">
+                    <h2 class="section-title">Bienvenidos a Hotelituss</h2>
+                    <p class="lead">Experimenta el lujo y la comodidad en nuestro exclusivo hotel.</p>
+                    <p>En Hotelituss, nos dedicamos a proporcionar una experiencia inolvidable a nuestros huéspedes. Desde nuestras lujosas habitaciones hasta nuestros servicios de primera clase, cada detalle está diseñado para superar sus expectativas.</p>
+                    <a href="#habitaciones" class="btn btn-outline-primary mt-3">Explorar habitaciones</a>
+                </div>
+                <div class="col-md-6" data-aos="fade-left">
+                    <img src="https://www.frontsigns.com/wp-content/uploads/2022/02/luxury-hotel-lobby-designs.jpg" alt="Hotel Lobby" class="img-fluid rounded shadow-lg">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="habitaciones" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Nuestras Habitaciones</h2>
+            <div class="row">
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="room-card">
+                        <a href="#" class="room-link">
+                            <img src="https://www.derbyhotels.com/files/img/img_s/bg-single-3-930.jpg" class="card-img-top" alt="Habitación Individual">
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title">Habitación Individual</h5>
+                            <p class="card-text">Perfecta para viajeros solitarios que buscan comodidad y estilo.</p>
+                            <a href="#" class="btn btn-outline-primary">Ver detalles</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="room-card">
+                        <a href="#" class="room-link">
+                            <img src="https://cdn.prod.website-files.com/5faeb38cb5f86ba2c2288cd3/6256f94b472b77aa5ec05264_executive%20double%20double%201.png" class="card-img-top" alt="Habitación Doble">
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title">Habitación Doble</h5>
+                            <p class="card-text">Ideal para parejas o amigos que desean compartir experiencias.</p>
+                            <a href="#" class="btn btn-outline-primary">Ver detalles</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="room-card">
+                        <a href="#" class="room-link">
+                            <img src="https://media.revistaad.es/photos/65c21a5605ba5d3cad2a23ba/16:9/w_2560%2Cc_limit/atr.royalmansion-bedroom2-mr.jpg" class="card-img-top" alt="Suite">
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title">Suite</h5>
+                            <p class="card-text">Lujo y comodidad en un espacio amplio y elegantemente decorado.</p>
+                            <a href="#" class="btn btn-outline-primary">Ver detalles</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="servicios" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Nuestros Servicios</h2>
+            <div class="row">
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="service-card text-center">
+                        <i class="fas fa-utensils fa-3x mb-3"></i>
+                        <h4>Restaurante Gourmet</h4>
+                        <p>Disfruta de nuestra exquisita gastronomía local e internacional en un ambiente sofisticado.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="service-card text-center">
+                        <i class="fas fa-spa fa-3x mb-3"></i>
+                        <h4>Spa de Lujo</h4>
+                        <p>Relájate y renuévate en nuestro lujoso spa con diversos tratamientos y terapias.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="service-card text-center">
+                        <i class="fas fa-dumbbell fa-3x mb-3"></i>
+                        <h4>Gimnasio Equipado</h4>
+                        <p>Mantén tu rutina de ejercicios en nuestro moderno gimnasio con vistas panorámicas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="galeria" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Galería</h2>
+            <div class="row g-3">
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="100">
+                    <a href="#" class="gallery-link">
+                        <img src="https://s3.amazonaws.com/arc-wordpress-client-uploads/infobae-wp/wp-content/uploads/2019/05/20152451/Mandarin-Oriental-Hong-Kong-3.jpg" class="img-fluid gallery-img" alt="Habitación de lujo">
+                    </a>
+                </div>
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
+                    <a href="#" class="gallery-link">
+                        <img src="https://e00-expansion.uecdn.es/assets/multimedia/imagenes/2021/04/09/16179881106755.jpg" class="img-fluid gallery-img" alt="Restaurante">
+                    </a>
+                </div>
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="300">
+                    <a href="#" class="gallery-link">
+                        <img src="https://i.pinimg.com/originals/e8/0d/41/e80d413d3871b46620452a13c247675c.jpg" class="img-fluid gallery-img" alt="Piscina">
+                    </a>
+                </div>
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="400">
+                    <a href="#" class="gallery-link">
+                        <img src="https://media.viajando.travel/p/5afb426c49b440af091dda3822a3e290/adjuntos/236/imagenes/000/692/0000692457/sudamerica-spa-cardalesjpg.jpg" class="img-fluid gallery-img" alt="Spa">
+                    </a>
+                </div>
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="500">
+                    <a href="#" class="gallery-link">
+                        <img src="https://img.freepik.com/fotos-premium/gimnasio-hotel-lujo_1101236-94.jpg" class="img-fluid gallery-img" alt="Gimnasio">
+                    </a>
+                </div>
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="600">
+                    <a href="#" class="gallery-link">
+                        <img src="https://img.freepik.com/fotos-premium/bar-hotel-lujo-asientos-cuero-larga-barra_14117-711520.jpg" class="img-fluid gallery-img" alt="Bar">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="reservas" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Reserva tu estancia</h2>
+            <form class="reservation-form" data-aos="fade-up" data-aos-delay="100">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="checkIn" class="form-label">Fecha de entrada</label>
+                        <input type="date" class="form-control" id="checkIn" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="checkOut" class="form-label">Fecha de salida</label>
+                        <input type="date" class="form-control" id="checkOut" required>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="roomType" class="form-label">Tipo de habitación</label>
+                        <select class="form-select" id="roomType" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="individual">Sencilla</option>
+                            <option value="doble">Doble</option>
+                            <option value="suite">Suite</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="guests" class="form-label">Número de huéspedes</label>
+                        <input type="number" class="form-control" id="guests" min="1" max="4" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100">Reservar ahora</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="opiniones" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Opiniones de nuestros clientes</h2>
+            <div class="row">
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="testimonial-card">
+                        <p class="testimonial-text">"Una experiencia inolvidable. El servicio y las instalaciones superaron todas nuestras expectativas."</p>
+                        <p class="testimonial-author">- María G.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="testimonial-card">
+                        <p class="testimonial-text">"La atención al detalle en cada aspecto de nuestra estancia fue impresionante. Definitivamente volveremos."</p>
+                        <p class="testimonial-author">- Juan P.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="testimonial-card">
+                        <p class="testimonial-text">"El spa y el restaurante son de clase mundial. Una experiencia de lujo de principio a fin."</p>
+                        <p  class="testimonial-author">- Ana L.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="ubicacion" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Nuestra Ubicación</h2>
+            <div class="row">
+                <div class="col-md-6 mb-4" data-aos="fade-right">
+                    <div id="map" class="map-container"></div>
+                </div>
+                <div class="col-md-6 mb-4" data-aos="fade-left">
+                    <div class="location-info">
+                        <h4>Cómo llegar</h4>
+                        <p>Estamos ubicados en el corazón de la ciudad.</p>
+                        <h4>Dirección</h4>
+                        <p>Av. Emilio Civit 367, Mendoza, Argentina</p>
+                        <h4>Contacto</h4>
+                        <p>Teléfono: +1 234 567 890</p>
+                        <p>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b1d8dfd7def1d9dec5d4ddd8c5c4c2c29fd2dedc">[email&#160;protected]</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contacto" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5" data-aos="fade-up">Contáctanos</h2>
+            <div class="row">
+                <div class="col-md-6 mb-4" data-aos="fade-right">
+                    <h4>Información de contacto</h4>
+                    <p><strong>Dirección:</strong> Calle Principal 123, Ciudad</p>
+                    <p><strong>Teléfono:</strong> +1 234 567 890</p>
+                    <p><strong>Email:</strong> <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3851565e577850574c5d54514c4d4b4b165b5755">[email&#160;protected]</a></p>
+                </div>
+                <div class="col-md-6 mb-4" data-aos="fade-left">
+                    <h4>Envíanos un mensaje</h4>
+                    <form class="contact-form">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="Nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" placeholder="Email" required>
+                        </div>
+                        <div class="mb-3">
+                            <textarea class="form-control" rows="3" placeholder="Mensaje" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>Hotelituss</h5>
+                    <p>Experiencia de lujo y confort.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Enlaces rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#inicio">Inicio</a></li>
+                        <li><a href="#habitaciones">Habitaciones</a></li>
+                        <li><a href="#servicios">Servicios</a></li>
+                        <li><a href="#contacto">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Síguenos</h5>
+                    <div class="social-icons">
+                        <a href="#" class="me-2"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="me-2"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="me-2"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="mt-4 mb-3">
+            <p class="text-center mb-0">&copy; 2023 Hotelituss. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <button id="darkModeToggle" class="btn btn-dark position-fixed bottom-0 end-0 m-3">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createUserModalLabel">Crear Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createUserForm" method="post" action="/create">
+                        <div class="mb-3">
+                            <label for="userName" class="form-label">Nombre</label>
+                            <input type="text" name="nombre" class="form-control" id="userName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userEmail" class="form-label">Email</label>
+                            <input type="email" name="correo" class="form-control" id="userEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPassword" class="form-label">Telefono</label>
+                            <input type="tel" name="telefono" class="form-control" id="userTelefono" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Crear Usuario</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        AOS.init({
+            duration: 1000,
+            once: true,
+        });
+
+        // Coordenadas de Avenida Emilio Civit 120, Mendoza, Argentina
+        const hotelLatitude = -32.88789;
+        const hotelLongitude = -68.855;
+
+        // Inicializar el mapa
+        const map = L.map('map').setView([hotelLatitude, hotelLongitude], 15);
+
+        // Agregar capa de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Agregar un marcador para el hotel
+        L.marker([hotelLatitude, hotelLongitude])
+            .addTo(map)
+            .bindPopup('Hotelituss<br>Avenida Emilio Civit 367<br>Mendoza, Argentina')
+            .openPopup();
+
+        document.getElementById('darkModeToggle').addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            const icon = this.querySelector('i');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // Manejar la apertura del modal
+        document.getElementById('createUserLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            var myModal = new bootstrap.Modal(document.getElementById('createUserModal'));
+            myModal.show();
+        });
+
+        // Manejar el envío del formulario
+        document.getElementById('createUserForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var name = document.getElementById('userName').value;
+            var email = document.getElementById('userEmail').value;
+            var password = document.getElementById('userPassword').value;
+
+            // Aquí puedes agregar la lógica para enviar los datos al servidor
+            console.log('Usuario creado:', { name, email, password });
+
+            // Cerrar el modal
+            var myModal = bootstrap.Modal.getInstance(document.getElementById('createUserModal'));
+            myModal.hide();
+
+            // Limpiar el formulario
+            this.reset();
+
+            // Mostrar un mensaje de éxito (puedes personalizar esto)
+            alert('Usuario creado con éxito!');
+        });
+    </script>
 </body>
 </html>
+
