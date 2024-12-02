@@ -722,6 +722,17 @@ footer a:hover {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+
+                    <form action="/create" method="post">
+
+                        <input type="text" name="nombre" placeholder="Nombre" required>
+                        <input type="email" name="correo" placeholder="Correo" required>
+                        <input type="tel" name="telefono" placeholder="Teléfono" required>
+                        <button type="submit">Subir Datos</button>
+
+                    </form>
+
+
                     <form id="createUserForm" action="/create" method="POST">
                         <div class="mb-3">
                             <label for="userName" class="form-label">Nombre</label>
