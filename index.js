@@ -41,12 +41,12 @@ app.get('/select', async (req, res) => {
 });
 
 app.get('/update', async (req, res) => {
-    const result = await pool.query("UPDATE usuarios SET nombre = 'Maurisio Hermoso', correo = 'maurisiaxd@example.com' WHERE id = 1;")
+    const result = await pool.query("UPDATE usuarios SET nombre = 'Lautaro', correo = 'Lautaro@gmail.com' WHERE id = 18;")
     res.send("se actualizo el usuario")
 });
 
 app.get('/delete', async (req, res) => {
-    const result = await pool.query("DELETE FROM usuarios WHERE id = 3;")
+    const result = await pool.query("DELETE FROM usuarios WHERE id = 18;")
     res.send("se elimino el usuario")
 });
 
