@@ -170,3 +170,7 @@ app.listen(PORT, () => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+
+app.listen(3000)
+console.log("server on port ", 3000)
