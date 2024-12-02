@@ -1,19 +1,20 @@
-import express from 'express';
-import { config } from "dotenv";
+import express, { query } from 'express';
+import {config} from "dotenv";
 import pg from "pg";
 
-// Configuración inicial
-config();
-
+config()
 
 const app = express();
-const pool =  new pg.Pool({
+
+const pool = new pg.Pool({
+    
     connectionString: process.env.DATABASE_URL
+
 })
 
 app.get('/', async (req, res) => {
-    const result = await pool.query('SELECT * from habitaciones')
-    return res.json(result.rows[0])
+    const result = await pool.query('SELECT * FROM usuarios')
+    return res.json(result.rows)
 });
 
 app.listen(3000)
