@@ -1,6 +1,7 @@
 import express, { query } from 'express';
 import {config} from "dotenv";
 import pg from "pg";
+import path from "path"; // Para manejar rutas
 
 config()
 
@@ -16,7 +17,7 @@ const pool = new pg.Pool({
 })
 
 app.get('/', async (req, res) => {
-    res.send("principal")
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/create', async (req, res) => {
