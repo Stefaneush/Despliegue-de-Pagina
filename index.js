@@ -18,7 +18,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 
 
-// Servir archivos estáticos desde la carpeta "public"
+// Servir archivos estáticos desde la carpeta "public" //NUEVO
 app.use(express.static('public'));
 
 const pool = new pg.Pool({
