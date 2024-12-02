@@ -1,8 +1,8 @@
 import express, { query } from 'express';
 import {config} from "dotenv";
 import pg from "pg";
-import path from "path"; // Para manejar rutas (NUEVO)
 
+import path from "path"; // Para manejar rutas (NUEVO)
 import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
 
 config()
@@ -27,7 +27,7 @@ app.get('/', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/create', async (req, res) => {
+app.post('/create', async (req, res) => {
 
     const { nombre, correo, telefono } = req.body;
 
