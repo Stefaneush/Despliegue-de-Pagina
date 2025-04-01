@@ -1,6 +1,6 @@
 import express, { query } from 'express';
-import {config} from "dotenv";
-import pg from "pg";
+import {config} from 'dotenv';
+import pg from 'pg';
 
 import path from "path"; // Para manejar rutas (NUEVO)
 import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
