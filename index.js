@@ -19,8 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const pool = new pg.Pool({
     
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }  // ✅ IMPORTANTE para Render
+    connectionString: process.env.DATABASE_URL
 
 })
 
