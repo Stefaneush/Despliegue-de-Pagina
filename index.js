@@ -51,5 +51,10 @@ app.get('/delete', async (req, res) => {
 });
 
 
+pool.connect()
+  .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
+  .catch(err => console.error("❌ Error al conectar con PostgreSQL:", err));
+
+
 app.listen(3000)
 console.log("server on port ", 3000)
