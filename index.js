@@ -27,7 +27,7 @@ app.get('/', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/create', async (req, res) => {
+app.post('/create', async (req, res) => {
 
     const { nombre, correo, telefono } = req.body;
 
