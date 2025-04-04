@@ -14,6 +14,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Servir archivos estáticos desde la carpeta 'public' (funcionamiento del css aparte del index.html)
+app.use(express.static("public"));
+
 // Middleware para analizar los datos de los formularios //NUEVO
 app.use(express.urlencoded({ extended: true }));
 
@@ -27,13 +30,17 @@ app.get('/', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+
 app.post('/create', async (req, res) => {
 
     const { nombre, correo, telefono } = req.body;
-
     const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono) VALUES ($1, $2, $3); " , [nombre, correo, telefono])
-    res.send("El usuario ha sido creado exitosamente")
+    res.redirect('/'); //funcion para llevar de vuelta a la pagina de inicio
+    // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
+
 });
+
+
 
 app.get('/select', async (req, res) => {
     const result = await pool.query('SELECT * FROM usuarios')
@@ -46,7 +53,7 @@ app.get('/update', async (req, res) => {
 });
 
 app.get('/delete', async (req, res) => {
-    const result = await pool.query("DELETE FROM usuarios WHERE id = 18;")
+    const result = await pool.query("DELETE FROM usuarios;")
     res.send("se elimino el usuario")
 });
 

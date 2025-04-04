@@ -3,387 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hotelituss - Experiencia de lujo y confort en el corazón de Mendoza, Argentina">
+    <meta name="keywords" content="hotel, lujo, Mendoza, Argentina, alojamiento, spa, restaurante">
     <title>Hotelituss - Experiencia de Lujo</title>
+    
+    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Estilos -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="/public/css/styles.css">
-
-    <style>
-        :root {
-    --primary-color: #c8a97e;
-    --secondary-color: #4a4a4a;
-    --background-color: #f9f9f9;
-    --text-color: #333333;
-    --accent-color: #e0c9a6;
-    --light-bg: #f5f0e8;
-    --medium-bg: #e8dfd0;
-    --dark-bg: #d1c3a9;
-}
-
-body {
-    font-family: 'Roboto', sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    transition: background-color 0.3s, color 0.3s;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
-}
-
-.navbar {
-    background-color: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    transition: background-color 0.3s;
-    padding: 1rem 0;
-}
-
-.navbar-brand img {
-    max-height: 40px;
-}
-
-.nav-link {
-    color: var(--secondary-color) !important;
-    font-weight: 500;
-    transition: color 0.3s;
-}
-
-.nav-link:hover {
-    color: var(--primary-color) !important;
-}
-
-.hero {
-    position: relative;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.hero-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1;
-}
-
-.hero-content {
-    position: relative;
-    text-align: center;
-    color: #ffffff;
-    z-index: 2;
-    max-width: 800px;
-    padding: 2rem;
-}
-
-.hero-content h1 {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.hero-content p {
-    font-size: 1.5rem;
-    margin-bottom: 2rem;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.carousel-item img {
-    object-fit: cover;
-    height: 100vh;
-}
-
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #ffffff;
-    transition: all 0.3s;
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-color);
-    border-color: var(--accent-color);
-}
-
-.section-title {
-    font-size: 2.5rem;
-    color: var(--secondary-color);
-    margin-bottom: 2rem;
-}
-
-#bienvenida {
-    background-color: var(--light-bg);
-}
-
-#bienvenida .img-fluid {
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.room-card, .service-card, .testimonial-card {
-    background-color: #ffffff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.room-card:hover, .service-card:hover, .testimonial-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.room-card img {
-    height: 200px;
-    object-fit: cover;
-}
-
-.service-card {
-    padding: 2rem;
-}
-
-.service-card i {
-    color: var(--primary-color);
-}
-
-.testimonial-card {
-    padding: 2rem;
-    text-align: center;
-}
-
-.testimonial-text {
-    font-style: italic;
-    margin-bottom: 1rem;
-}
-
-.testimonial-author {
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.gallery-img {
-    border-radius: 10px;
-    transition: transform 0.3s;
-}
-
-.gallery-img:hover {
-    transform: scale(1.05);
-}
-
-.reservation-form, .contact-form {
-    background-color: #ffffff;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.map-container {
-    height: 400px;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-footer {
-    background-color: var(--secondary-color);
-}
-
-footer a {
-    color: #ffffff;
-    text-decoration: none;
-    transition: color 0.3s;
-}
-
-footer a:hover {
-    color: var(--primary-color);
-}
-
-.social-icons a {
-    font-size: 1.5rem;
-    margin-right: 1rem;
-}
-
-#darkModeToggle {
-    z-index: 1000;
-}
-
-.dark-mode {
-    --background-color: #1a1a1a;
-    --text-color: #f0f0f0;
-    --light-bg: #2c2c2c;
-    --medium-bg: #3a3a3a;
-    --dark-bg: #4a4a4a;
-}
-
-.dark-mode .navbar {
-    background-color: rgba(26, 26, 26, 0.9);
-}
-
-.dark-mode .nav-link {
-    color: #f0f0f0 !important;
-}
-
-.dark-mode .room-card, .dark-mode .service-card, .dark-mode .testimonial-card, 
-.dark-mode .reservation-form, .dark-mode .contact-form {
-    background-color: var(--light-bg);
-    color: var(--text-color);
-}
-
-.dark-mode .section-title {
-    color: var(--primary-color);
-}
-
-.dark-mode footer {
-    background-color: #000000;
-}
-
-#habitaciones {
-    background-color: var(--medium-bg);
-}
-
-#servicios {
-    background-color: var(--light-bg);
-}
-
-#galeria {
-    background-color: var(--medium-bg);
-}
-
-#reservas {
-    background-color: var(--dark-bg);
-}
-
-#opiniones {
-    background-color: var(--light-bg);
-}
-
-#ubicacion {
-    background-color: var(--medium-bg);
-}
-
-#contacto {
-    background-color: var(--dark-bg);
-}
-
-
-@media (max-width: 768px) {
-    .hero-content h1 {
-        font-size: 2.5rem;
-    }
-
-    .hero-content p {
-        font-size: 1.2rem;
-    }
-
-    .section-title {
-        font-size: 2rem;
-    }
-}
-
-/* User Creation Modal Styles */
-.modal-content {
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
-.modal-header {
-  border-bottom-color: var(--accent-color);
-}
-
-.modal-title {
-  color: var(--primary-color);
-}
-
-.form-label {
-  color: var(--secondary-color);
-}
-
-.form-control {
-  background-color: var(--light-bg);
-  color: var(--text-color);
-  border-color: var(--accent-color);
-}
-
-.form-control:focus {
-  background-color: var(--medium-bg);
-  color: var(--text-color);
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(200, 169, 126, 0.25);
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-}
-
-.btn-create-user {
-    background-color: var(--primary-color);
-    color: #ffffff !important;
-    border-radius: 20px;
-    padding: 8px 16px;
-    margin-left: 10px;
-    transition: all 0.3s ease;
-}
-
-.btn-create-user:hover {
-    background-color: var(--accent-color);
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.dark-mode .btn-create-user {
-    background-color: var(--accent-color);
-    color: var(--text-color) !important;
-}
-
-.dark-mode .btn-create-user:hover {
-    background-color: var(--primary-color);
-    color: #ffffff !important;
-}
-
-/* Estilos para el modal de creación de usuario */
-.modal-content {
-    background-color: var(--background-color);
-    color: var(--text-color);
-}
-
-.modal-header {
-    border-bottom-color: var(--accent-color);
-}
-
-.modal-title {
-    color: var(--primary-color);
-}
-
-.dark-mode .modal-content {
-    background-color: var(--light-bg);
-}
-
-.dark-mode .modal-header {
-    border-bottom-color: var(--primary-color);
-}
-
-.dark-mode .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
-
-
-    </style>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    
+    <!-- Favicon -->
+    <link rel="icon" href="https://th.bing.com/th/id/OIG2.BQbN5r6GvZewXhI4RZDT?w=32&h=32&rs=1&pid=ImgDetMain" type="image/x-icon">
 </head>
 <body>
+    <!-- Barra de navegación -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="#" aria-label="Hotelituss">
                 <img src="https://th.bing.com/th/id/OIG2.BQbN5r6GvZewXhI4RZDT?w=1024&h=1024&rs=1&pid=ImgDetMain" alt="Hotelituss Logo" class="logo">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -413,386 +57,864 @@ footer a:hover {
                         <a class="nav-link" href="#contacto">Contacto</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-create-user" href="#" id="createUserLink">Crear Usuario</a>
+                        <a class="nav-link btn btn-login" href="#" id="loginLink">
+                            <i class="fas fa-user-circle me-1"></i>Iniciar sesión
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-create-user" href="#" id="createUserLink">
+                            <i class="fas fa-user-plus me-1"></i>Crear Usuario
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <section id="inicio" class="hero">
+    <!-- Hero Section -->
+    <header id="inicio" class="hero">
         <div class="hero-overlay"></div>
         <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="https://www.luxsphere.co/wp-content/uploads/One-Only-the-Palm-luxury-hotel-in-dubai-1-.jpg" class="d-block w-100" alt="Luxury Hotel">
+                    <img src="https://www.luxsphere.co/wp-content/uploads/One-Only-the-Palm-luxury-hotel-in-dubai-1-.jpg" class="d-block w-100" alt="Vista exterior de Hotelituss">
                 </div>
                 <div class="carousel-item">
-                    <img src="https://dq5r178u4t83b.cloudfront.net/wp-content/uploads/sites/125/2020/06/15182916/Sofitel-Dubai-Wafi-Luxury-Room-Bedroom-Skyline-View-Image1_WEB.jpg" class="d-block w-100" alt="Hotel Room">
+                    <img src="https://dq5r178u4t83b.cloudfront.net/wp-content/uploads/sites/125/2020/06/15182916/Sofitel-Dubai-Wafi-Luxury-Room-Bedroom-Skyline-View-Image1_WEB.jpg" class="d-block w-100" alt="Habitación de lujo con vista panorámica">
                 </div>
                 <div class="carousel-item">
-                    <img src="https://media.architecturaldigest.com/photos/55e79210cd709ad62e90102f/master/pass/dam-images-travel-2015-hotel-pools-best-hotel-pools-01.jpg" class="d-block w-100" alt="Hotel Pool">
+                    <img src="https://media.architecturaldigest.com/photos/55e79210cd709ad62e90102f/master/pass/dam-images-travel-2015-hotel-pools-best-hotel-pools-01.jpg" class="d-block w-100" alt="Piscina infinita con vista al mar">
                 </div>
             </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Anterior</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Siguiente</span>
+            </button>
         </div>
         <div class="hero-content">
             <h1 class="display-3" data-aos="fade-up">Bienvenido a Hotelituss</h1>
             <p class="lead" data-aos="fade-up" data-aos-delay="100">Descubre el lujo y la comodidad en cada detalle</p>
-            <a href="#reservas" class="btn btn-primary btn-lg mt-3" data-aos="fade-up" data-aos-delay="200">Reservar ahora</a>
+            <div data-aos="fade-up" data-aos-delay="200">
+                <a href="#reservas" class="btn btn-primary btn-lg mt-3">
+                    <i class="fas fa-calendar-check me-2"></i>Reservar ahora
+                </a>
+                <a href="#habitaciones" class="btn btn-outline-light btn-lg mt-3 ms-2">
+                    <i class="fas fa-bed me-2"></i>Ver habitaciones
+                </a>
+            </div>
         </div>
-    </section>
+    </header>
 
+    <!-- Bienvenida Section -->
     <section id="bienvenida" class="py-5">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-md-6" data-aos="fade-right">
+                <div class="col-lg-6" data-aos="fade-right">
                     <h2 class="section-title">Bienvenidos a Hotelituss</h2>
+                    <div class="section-divider"></div>
                     <p class="lead">Experimenta el lujo y la comodidad en nuestro exclusivo hotel.</p>
                     <p>En Hotelituss, nos dedicamos a proporcionar una experiencia inolvidable a nuestros huéspedes. Desde nuestras lujosas habitaciones hasta nuestros servicios de primera clase, cada detalle está diseñado para superar sus expectativas.</p>
-                    <a href="#habitaciones" class="btn btn-outline-primary mt-3">Explorar habitaciones</a>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check-circle"></i> Ubicación privilegiada en el corazón de Mendoza</li>
+                        <li><i class="fas fa-check-circle"></i> Habitaciones de lujo con vistas panorámicas</li>
+                        <li><i class="fas fa-check-circle"></i> Restaurante gourmet con cocina internacional</li>
+                        <li><i class="fas fa-check-circle"></i> Spa y centro de bienestar completo</li>
+                    </ul>
+                    <a href="#habitaciones" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-arrow-right me-2"></i>Explorar habitaciones
+                    </a>
                 </div>
-                <div class="col-md-6" data-aos="fade-left">
-                    <img src="https://www.frontsigns.com/wp-content/uploads/2022/02/luxury-hotel-lobby-designs.jpg" alt="Hotel Lobby" class="img-fluid rounded shadow-lg">
+                <div class="col-lg-6" data-aos="fade-left">
+                    <div class="image-container">
+                        <img src="https://www.frontsigns.com/wp-content/uploads/2022/02/luxury-hotel-lobby-designs.jpg" alt="Lobby de Hotelituss" class="img-fluid rounded shadow-lg">
+                        <div class="experience-badge">
+                            <span class="years">10</span>
+                            <span class="text">Años de<br>Excelencia</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Habitaciones Section -->
     <section id="habitaciones" class="py-5">
         <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Nuestras Habitaciones</h2>
+            <h2 class="section-title text-center" data-aos="fade-up">Nuestras Habitaciones</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Descubra nuestras elegantes habitaciones diseñadas para su máximo confort</p>
+            
             <div class="row">
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
                     <div class="room-card">
+                        <div class="room-tag">Popular</div>
                         <a href="#" class="room-link">
                             <img src="https://www.derbyhotels.com/files/img/img_s/bg-single-3-930.jpg" class="card-img-top" alt="Habitación Individual">
                         </a>
                         <div class="card-body">
-                            <h5 class="card-title">Habitación Individual</h5>
-                            <p class="card-text">Perfecta para viajeros solitarios que buscan comodidad y estilo.</p>
-                            <a href="#" class="btn btn-outline-primary">Ver detalles</a>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Habitación Individual</h5>
+                                <span class="room-price">$120<small>/noche</small></span>
+                            </div>
+                            <div class="room-features mb-3">
+                                <span><i class="fas fa-ruler-combined"></i> 28m²</span>
+                                <span><i class="fas fa-user"></i> 1 Persona</span>
+                                <span><i class="fas fa-wifi"></i> WiFi</span>
+                            </div>
+                            <p class="card-text">Perfecta para viajeros solitarios que buscan comodidad y estilo en un espacio íntimo y acogedor.</p>
+                            <a href="#" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-info-circle me-2"></i>Ver detalles
+                            </a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="room-card">
+                        <div class="room-tag bestseller">Más reservada</div>
                         <a href="#" class="room-link">
                             <img src="https://cdn.prod.website-files.com/5faeb38cb5f86ba2c2288cd3/6256f94b472b77aa5ec05264_executive%20double%20double%201.png" class="card-img-top" alt="Habitación Doble">
                         </a>
                         <div class="card-body">
-                            <h5 class="card-title">Habitación Doble</h5>
-                            <p class="card-text">Ideal para parejas o amigos que desean compartir experiencias.</p>
-                            <a href="#" class="btn btn-outline-primary">Ver detalles</a>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Habitación Doble</h5>
+                                <span class="room-price">$180<small>/noche</small></span>
+                            </div>
+                            <div class="room-features mb-3">
+                                <span><i class="fas fa-ruler-combined"></i> 35m²</span>
+                                <span><i class="fas fa-user"></i> 2 Personas</span>
+                                <span><i class="fas fa-wifi"></i> WiFi</span>
+                            </div>
+                            <p class="card-text">Ideal para parejas o amigos que desean compartir experiencias en un espacio elegante y confortable.</p>
+                            <a href="#" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-info-circle me-2"></i>Ver detalles
+                            </a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
                     <div class="room-card">
+                        <div class="room-tag luxury">Lujo</div>
                         <a href="#" class="room-link">
                             <img src="https://media.revistaad.es/photos/65c21a5605ba5d3cad2a23ba/16:9/w_2560%2Cc_limit/atr.royalmansion-bedroom2-mr.jpg" class="card-img-top" alt="Suite">
                         </a>
                         <div class="card-body">
-                            <h5 class="card-title">Suite</h5>
-                            <p class="card-text">Lujo y comodidad en un espacio amplio y elegantemente decorado.</p>
-                            <a href="#" class="btn btn-outline-primary">Ver detalles</a>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Suite Ejecutiva</h5>
+                                <span class="room-price">$280<small>/noche</small></span>
+                            </div>
+                            <div class="room-features mb-3">
+                                <span><i class="fas fa-ruler-combined"></i> 55m²</span>
+                                <span><i class="fas fa-user"></i> 2-4 Personas</span>
+                                <span><i class="fas fa-wifi"></i> WiFi</span>
+                            </div>
+                            <p class="card-text">Lujo y comodidad en un espacio amplio y elegantemente decorado con vistas panorámicas a la ciudad.</p>
+                            <a href="#" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-info-circle me-2"></i>Ver detalles
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <div class="text-center mt-4" data-aos="fade-up">
+                <a href="#" class="btn btn-primary">
+                    <i class="fas fa-th-large me-2"></i>Ver todas las habitaciones
+                </a>
+            </div>
         </div>
     </section>
 
+    <!-- Servicios Section -->
     <section id="servicios" class="py-5">
         <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Nuestros Servicios</h2>
+            <h2 class="section-title text-center" data-aos="fade-up">Nuestros Servicios</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Disfrute de nuestras instalaciones y servicios exclusivos</p>
+            
             <div class="row">
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
                     <div class="service-card text-center">
-                        <i class="fas fa-utensils fa-3x mb-3"></i>
+                        <div class="service-icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
                         <h4>Restaurante Gourmet</h4>
-                        <p>Disfruta de nuestra exquisita gastronomía local e internacional en un ambiente sofisticado.</p>
+                        <p>Disfruta de nuestra exquisita gastronomía local e internacional en un ambiente sofisticado con vistas panorámicas.</p>
+                        <ul class="service-features">
+                            <li>Cocina internacional</li>
+                            <li>Ingredientes locales</li>
+                            <li>Carta de vinos premium</li>
+                        </ul>
+                        <a href="#" class="btn btn-sm btn-outline-primary">Más información</a>
                     </div>
                 </div>
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="service-card text-center">
-                        <i class="fas fa-spa fa-3x mb-3"></i>
+                        <div class="service-icon">
+                            <i class="fas fa-spa"></i>
+                        </div>
                         <h4>Spa de Lujo</h4>
-                        <p>Relájate y renuévate en nuestro lujoso spa con diversos tratamientos y terapias.</p>
+                        <p>Relájate y renuévate en nuestro lujoso spa con diversos tratamientos y terapias diseñados para tu bienestar.</p>
+                        <ul class="service-features">
+                            <li>Masajes terapéuticos</li>
+                            <li>Tratamientos faciales</li>
+                            <li>Sauna y baño turco</li>
+                        </ul>
+                        <a href="#" class="btn btn-sm btn-outline-primary">Más información</a>
                     </div>
                 </div>
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
                     <div class="service-card text-center">
-                        <i class="fas fa-dumbbell fa-3x mb-3"></i>
+                        <div class="service-icon">
+                            <i class="fas fa-dumbbell"></i>
+                        </div>
                         <h4>Gimnasio Equipado</h4>
-                        <p>Mantén tu rutina de ejercicios en nuestro moderno gimnasio con vistas panorámicas.</p>
+                        <p>Mantén tu rutina de ejercicios en nuestro moderno gimnasio con equipos de última generación y vistas panorámicas.</p>
+                        <ul class="service-features">
+                            <li>Equipos cardiovasculares</li>
+                            <li>Zona de pesas</li>
+                            <li>Entrenadores personales</li>
+                        </ul>
+                        <a href="#" class="btn btn-sm btn-outline-primary">Más información</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-3 col-6 mb-4" data-aos="fade-up">
+                    <div class="amenity-item text-center">
+                        <i class="fas fa-swimming-pool"></i>
+                        <h5>Piscina</h5>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="amenity-item text-center">
+                        <i class="fas fa-parking"></i>
+                        <h5>Estacionamiento</h5>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="amenity-item text-center">
+                        <i class="fas fa-concierge-bell"></i>
+                        <h5>Concierge 24h</h5>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="amenity-item text-center">
+                        <i class="fas fa-wifi"></i>
+                        <h5>WiFi Gratuito</h5>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Galería Section -->
     <section id="galeria" class="py-5">
         <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Galería</h2>
+            <h2 class="section-title text-center" data-aos="fade-up">Galería</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Explore nuestras instalaciones a través de imágenes</p>
+            
             <div class="row g-3">
-                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="100">
-                    <a href="#" class="gallery-link">
+                <div class="col-md-4 col-6" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="gallery-item">
                         <img src="https://s3.amazonaws.com/arc-wordpress-client-uploads/infobae-wp/wp-content/uploads/2019/05/20152451/Mandarin-Oriental-Hong-Kong-3.jpg" class="img-fluid gallery-img" alt="Habitación de lujo">
-                    </a>
+                        <div class="gallery-overlay">
+                            <div class="gallery-info">
+                                <h5>Habitación de Lujo</h5>
+                                <a href="#" class="gallery-icon"><i class="fas fa-expand"></i></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
-                    <a href="#" class="gallery-link">
+                <div class="col-md-4 col-6" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="gallery-item">
                         <img src="https://e00-expansion.uecdn.es/assets/multimedia/imagenes/2021/04/09/16179881106755.jpg" class="img-fluid gallery-img" alt="Restaurante">
-                    </a>
+                        <div class="gallery-overlay">
+                            <div class="gallery-info">
+                                <h5>Restaurante Gourmet</h5>
+                                <a href="#" class="gallery-icon"><i class="fas fa-expand"></i></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="300">
-                    <a href="#" class="gallery-link">
+                <div class="col-md-4 col-6" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="gallery-item">
                         <img src="https://i.pinimg.com/originals/e8/0d/41/e80d413d3871b46620452a13c247675c.jpg" class="img-fluid gallery-img" alt="Piscina">
-                    </a>
+                        <div class="gallery-overlay">
+                            <div class="gallery-info">
+                                <h5>Piscina Infinita</h5>
+                                <a href="#" class="gallery-icon"><i class="fas fa-expand"></i></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="400">
-                    <a href="#" class="gallery-link">
+                <div class="col-md-4 col-6" data-aos="zoom-in" data-aos-delay="400">
+                    <div class="gallery-item">
                         <img src="https://media.viajando.travel/p/5afb426c49b440af091dda3822a3e290/adjuntos/236/imagenes/000/692/0000692457/sudamerica-spa-cardalesjpg.jpg" class="img-fluid gallery-img" alt="Spa">
-                    </a>
+                        <div class="gallery-overlay">
+                            <div class="gallery-info">
+                                <h5>Spa & Wellness</h5>
+                                <a href="#" class="gallery-icon"><i class="fas fa-expand"></i></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="500">
-                    <a href="#" class="gallery-link">
+                <div class="col-md-4 col-6" data-aos="zoom-in" data-aos-delay="500">
+                    <div class="gallery-item">
                         <img src="https://img.freepik.com/fotos-premium/gimnasio-hotel-lujo_1101236-94.jpg" class="img-fluid gallery-img" alt="Gimnasio">
-                    </a>
+                        <div class="gallery-overlay">
+                            <div class="gallery-info">
+                                <h5>Gimnasio Moderno</h5>
+                                <a href="#" class="gallery-icon"><i class="fas fa-expand"></i></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="600">
-                    <a href="#" class="gallery-link">
+                <div class="col-md-4 col-6" data-aos="zoom-in" data-aos-delay="600">
+                    <div class="gallery-item">
                         <img src="https://img.freepik.com/fotos-premium/bar-hotel-lujo-asientos-cuero-larga-barra_14117-711520.jpg" class="img-fluid gallery-img" alt="Bar">
-                    </a>
+                        <div class="gallery-overlay">
+                            <div class="gallery-info">
+                                <h5>Bar & Lounge</h5>
+                                <a href="#" class="gallery-icon"><i class="fas fa-expand"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4" data-aos="fade-up">
+                <a href="#" class="btn btn-primary">
+                    <i class="fas fa-images me-2"></i>Ver más fotos
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reservas Section -->
+    <section id="reservas" class="py-5">
+        <div class="container">
+            <h2 class="section-title text-center" data-aos="fade-up">Reserva tu estancia</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Planifique su visita y disfrute de una experiencia inolvidable</p>
+            
+            <div class="row justify-content-center">
+                <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
+                    <form class="reservation-form">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="checkIn" class="form-label">Fecha de entrada</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                    <input type="date" class="form-control" id="checkIn" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="checkOut" class="form-label">Fecha de salida</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                    <input type="date" class="form-control" id="checkOut" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="roomType" class="form-label">Tipo de habitación</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-bed"></i></span>
+                                    <select class="form-select" id="roomType" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="individual">Habitación Individual</option>
+                                        <option value="doble">Habitación Doble</option>
+                                        <option value="suite">Suite Ejecutiva</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="guests" class="form-label">Número de huéspedes</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
+                                    <input type="number" class="form-control" id="guests" min="1" max="4" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Nombre completo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="name" placeholder="Ingrese su nombre" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Correo electrónico</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" class="form-control" id="email" placeholder="Ingrese su email" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="specialRequests" class="form-label">Solicitudes especiales</label>
+                            <textarea class="form-control" id="specialRequests" rows="3" placeholder="Indique cualquier solicitud especial que pueda tener"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-calendar-check me-2"></i>Reservar ahora
+                        </button>
+                        <div class="reservation-info mt-3">
+                            <small><i class="fas fa-info-circle me-1"></i> No se realizará ningún cargo hasta confirmar la reserva</small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-md-4 mb-4" data-aos="fade-up">
+                    <div class="reservation-feature text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h4>Reserva Flexible</h4>
+                        <p>Cancelación gratuita hasta 24 horas antes de su llegada</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="reservation-feature text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-percent"></i>
+                        </div>
+                        <h4>Mejor Precio Garantizado</h4>
+                        <p>Encuentre un precio más bajo y le igualamos la oferta</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="reservation-feature text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-gift"></i>
+                        </div>
+                        <h4>Beneficios Exclusivos</h4>
+                        <p>Desayuno gratuito y upgrade de habitación según disponibilidad</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="reservas" class="py-5">
-        <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Reserva tu estancia</h2>
-            <form class="reservation-form" data-aos="fade-up" data-aos-delay="100">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="checkIn" class="form-label">Fecha de entrada</label>
-                        <input type="date" class="form-control" id="checkIn" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="checkOut" class="form-label">Fecha de salida</label>
-                        <input type="date" class="form-control" id="checkOut" required>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="roomType" class="form-label">Tipo de habitación</label>
-                        <select class="form-select" id="roomType" required>
-                            <option value="">Seleccionar...</option>
-                            <option value="individual">Sencilla</option>
-                            <option value="doble">Doble</option>
-                            <option value="suite">Suite</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="guests" class="form-label">Número de huéspedes</label>
-                        <input type="number" class="form-control" id="guests" min="1" max="4" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-lg w-100">Reservar ahora</button>
-            </form>
-        </div>
-    </section>
-
+    <!-- Opiniones Section -->
     <section id="opiniones" class="py-5">
         <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Opiniones de nuestros clientes</h2>
+            <h2 class="section-title text-center" data-aos="fade-up">Opiniones de nuestros clientes</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Descubra lo que dicen nuestros huéspedes sobre su experiencia</p>
+            
             <div class="row">
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
                     <div class="testimonial-card">
-                        <p class="testimonial-text">"Una experiencia inolvidable. El servicio y las instalaciones superaron todas nuestras expectativas."</p>
-                        <p class="testimonial-author">- María G.</p>
+                        <div class="testimonial-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="testimonial-text">"Una experiencia inolvidable. El servicio y las instalaciones superaron todas nuestras expectativas. El personal fue extremadamente atento y profesional."</p>
+                        <div class="testimonial-user">
+                            <img src="https://randomuser.me/api/portraits/women/65.jpg" alt="María G." class="testimonial-avatar">
+                            <div>
+                                <p class="testimonial-author">María G.</p>
+                                <p class="testimonial-location">Buenos Aires, Argentina</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="testimonial-card">
-                        <p class="testimonial-text">"La atención al detalle en cada aspecto de nuestra estancia fue impresionante. Definitivamente volveremos."</p>
-                        <p class="testimonial-author">- Juan P.</p>
+                        <div class="testimonial-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="testimonial-text">"La atención al detalle en cada aspecto de nuestra estancia fue impresionante. Las habitaciones son espaciosas y elegantes. Definitivamente volveremos."</p>
+                        <div class="testimonial-user">
+                            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Juan P." class="testimonial-avatar">
+                            <div>
+                                <p class="testimonial-author">Juan P.</p>
+                                <p class="testimonial-location">Santiago, Chile</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
                     <div class="testimonial-card">
-                        <p class="testimonial-text">"El spa y el restaurante son de clase mundial. Una experiencia de lujo de principio a fin."</p>
-                        <p  class="testimonial-author">- Ana L.</p>
+                        <div class="testimonial-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                        <p class="testimonial-text">"El spa y el restaurante son de clase mundial. La comida es exquisita y los tratamientos del spa son rejuvenecedores. Una experiencia de lujo de principio a fin."</p>
+                        <div class="testimonial-user">
+                            <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Ana L." class="testimonial-avatar">
+                            <div>
+                                <p class="testimonial-author">Ana L.</p>
+                                <p class="testimonial-location">Madrid, España</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+            
+            <div class="text-center mt-4" data-aos="fade-up">
+                <a href="#" class="btn btn-outline-primary">
+                    <i class="fas fa-comment-alt me-2"></i>Ver todas las opiniones
+                </a>
             </div>
         </div>
     </section>
 
+    <!-- Ubicación Section -->
     <section id="ubicacion" class="py-5">
         <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Nuestra Ubicación</h2>
+            <h2 class="section-title text-center" data-aos="fade-up">Nuestra Ubicación</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Encuentre nuestro hotel en el corazón de Mendoza</p>
+            
             <div class="row">
-                <div class="col-md-6 mb-4" data-aos="fade-right">
+                <div class="col-lg-6 mb-4" data-aos="fade-right">
                     <div id="map" class="map-container"></div>
                 </div>
-                <div class="col-md-6 mb-4" data-aos="fade-left">
+                <div class="col-lg-6 mb-4" data-aos="fade-left">
                     <div class="location-info">
-                        <h4>Cómo llegar</h4>
-                        <p>Estamos ubicados en el corazón de la ciudad.</p>
-                        <h4>Dirección</h4>
-                        <p>Av. Emilio Civit 367, Mendoza, Argentina</p>
-                        <h4>Contacto</h4>
-                        <p>Teléfono: +1 234 567 890</p>
-                        <p>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b1d8dfd7def1d9dec5d4ddd8c5c4c2c29fd2dedc">[email&#160;protected]</a></p>
+                        <div class="location-item">
+                            <div class="location-icon">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <div>
+                                <h4>Dirección</h4>
+                                <p>Av. Emilio Civit 367, M5500 Mendoza, Argentina</p>
+                            </div>
+                        </div>
+                        <div class="location-item">
+                            <div class="location-icon">
+                                <i class="fas fa-phone-alt"></i>
+                            </div>
+                            <div>
+                                <h4>Teléfono</h4>
+                                <p>+54 261 423 7890</p>
+                            </div>
+                        </div>
+                        <div class="location-item">
+                            <div class="location-icon">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <div>
+                                <h4>Email</h4>
+                                <p>info@hotelituss.com</p>
+                            </div>
+                        </div>
+                        <div class="location-item">
+                            <div class="location-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <h4>Horario de recepción</h4>
+                                <p>24 horas, todos los días</p>
+                            </div>
+                        </div>
+                        <div class="location-attractions mt-4">
+                            <h4>Atracciones cercanas</h4>
+                            <ul>
+                                <li><i class="fas fa-wine-glass-alt me-2"></i>Bodegas y viñedos (15 min)</li>
+                                <li><i class="fas fa-mountain me-2"></i>Parque San Martín (5 min)</li>
+                                <li><i class="fas fa-store me-2"></i>Centro comercial (10 min)</li>
+                                <li><i class="fas fa-plane me-2"></i>Aeropuerto Internacional (25 min)</li>
+                            </ul>
+                        </div>
+                        <a href="https://maps.google.com" target="_blank" class="btn btn-outline-primary mt-3">
+                            <i class="fas fa-directions me-2"></i>Cómo llegar
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="contacto" class="py-5">
+    <!-- Contacto Section -->
+    <section id="contacto" class="py-5 text-center">
         <div class="container">
-            <h2 class="section-title text-center mb-5" data-aos="fade-up">Contáctanos</h2>
-            <div class="row">
-                <div class="col-md-6 mb-4" data-aos="fade-right">
-                    <h4>Información de contacto</h4>
-                    <p><strong>Dirección:</strong> Calle Principal 123, Ciudad</p>
-                    <p><strong>Teléfono:</strong> +1 234 567 890</p>
-                    <p><strong>Email:</strong> <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3851565e577850574c5d54514c4d4b4b165b5755">[email&#160;protected]</a></p>
-                </div>
-                <div class="col-md-6 mb-4" data-aos="fade-left">
-                    <h4>Envíanos un mensaje</h4>
+            <h2 class="section-title text-center" data-aos="fade-up">Contáctanos</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle text-center mb-5" data-aos="fade-up">Estamos aquí para responder a todas sus preguntas</p>
+            
+            <div class="row justify-content-center">
+                <div class="col-lg-8 mb-4" data-aos="fade-up">
+                    <div class="contact-methods mb-5">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="contact-method">
+                                    <div class="contact-icon">
+                                        <i class="fas fa-phone-alt"></i>
+                                    </div>
+                                    <h5>Llámanos</h5>
+                                    <p>+54 261 423 7890</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="contact-method">
+                                    <div class="contact-icon">
+                                        <i class="fas fa-envelope"></i>
+                                    </div>
+                                    <h5>Email</h5>
+                                    <p>info@hotelituss.com</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="contact-method">
+                                    <div class="contact-icon">
+                                        <i class="fas fa-comments"></i>
+                                    </div>
+                                    <h5>Chat en vivo</h5>
+                                    <p>Disponible 24/7</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <form class="contact-form">
-                        <div class="mb-3">
-                            <input type="text" class="form-control" placeholder="Nombre" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" placeholder="Nombre" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" class="form-control" placeholder="Email" required>
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <input type="email" class="form-control" placeholder="Email" required>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                <select class="form-select" required>
+                                    <option value="" selected disabled>Seleccione un asunto</option>
+                                    <option value="reserva">Consulta de reserva</option>
+                                    <option value="servicios">Información de servicios</option>
+                                    <option value="comentario">Comentarios y sugerencias</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <textarea class="form-control" rows="3" placeholder="Mensaje" required></textarea>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-comment-alt"></i></span>
+                                <textarea class="form-control" rows="4" placeholder="Mensaje" required></textarea>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar mensaje
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </section>
 
-    <footer class="bg-dark text-white py-4">
+    <!-- Footer -->
+    <footer class="py-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-4 mb-3">
-                    <h5>Hotelituss</h5>
-                    <p>Experiencia de lujo y confort.</p>
+                <div class="col-lg-4 mb-4">
+                    <div class="footer-brand mb-4">
+                        <img src="https://th.bing.com/th/id/OIG2.BQbN5r6GvZewXhI4RZDT?w=100&h=100&rs=1&pid=ImgDetMain" alt="Hotelituss Logo" class="footer-logo">
+                        <h5>Hotelituss</h5>
+                    </div>
+                    <p>Experiencia de lujo y confort en el corazón de Mendoza. Nuestro compromiso es brindarle una estancia inolvidable.</p>
+                    <div class="social-icons">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-lg-2 col-md-4 mb-4">
                     <h5>Enlaces rápidos</h5>
-                    <ul class="list-unstyled">
+                    <ul class="footer-links">
                         <li><a href="#inicio">Inicio</a></li>
                         <li><a href="#habitaciones">Habitaciones</a></li>
                         <li><a href="#servicios">Servicios</a></li>
+                        <li><a href="#galeria">Galería</a></li>
+                        <li><a href="#reservas">Reservas</a></li>
                         <li><a href="#contacto">Contacto</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <h5>Síguenos</h5>
-                    <div class="social-icons">
-                        <a href="#" class="me-2"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="me-2"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="me-2"><i class="fab fa-instagram"></i></a>
+                <div class="col-lg-3 col-md-4 mb-4">
+                    <h5>Servicios</h5>
+                    <ul class="footer-links">
+                        <li><a href="#">Restaurante Gourmet</a></li>
+                        <li><a href="#">Spa & Wellness</a></li>
+                        <li><a href="#">Gimnasio</a></li>
+                        <li><a href="#">Eventos y Conferencias</a></li>
+                        <li><a href="#">Traslados</a></li>
+                        <li><a href="#">Tours y Excursiones</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-4 mb-4">
+                    <h5>Contacto</h5>
+                    <ul class="footer-contact">
+                        <li><i class="fas fa-map-marker-alt"></i> Av. Emilio Civit 367, Mendoza, Argentina</li>
+                        <li><i class="fas fa-phone-alt"></i> +54 261 423 7890</li>
+                        <li><i class="fas fa-envelope"></i> info@hotelituss.com</li>
+                    </ul>
+                    <div class="footer-newsletter mt-3">
+                        <h6>Suscríbete a nuestro newsletter</h6>
+                        <div class="input-group">
+                            <input type="email" class="form-control" placeholder="Tu email">
+                            <button class="btn btn-primary" type="button"><i class="fas fa-paper-plane"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
             <hr class="mt-4 mb-3">
-            <p class="text-center mb-0">&copy; 2023 Hotelituss. Todos los derechos reservados.</p>
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0">&copy; 2023 Hotelituss. Todos los derechos reservados.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                    <ul class="footer-bottom-links">
+                        <li><a href="#">Términos y condiciones</a></li>
+                        <li><a href="#">Política de privacidad</a></li>
+                        <li><a href="#">Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </footer>
 
-    <button id="darkModeToggle" class="btn btn-dark position-fixed bottom-0 end-0 m-3">
+    <!-- Botón de modo oscuro -->
+    <button id="darkModeToggle" class="btn position-fixed bottom-0 end-0 m-3" aria-label="Cambiar modo oscuro/claro">
         <i class="fas fa-moon"></i>
     </button>
 
+    <!-- Botón de volver arriba -->
+    <button id="backToTop" class="btn position-fixed bottom-0 end-0 m-3 me-5" aria-label="Volver arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Modal de Crear Usuario -->
     <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="createUserModalLabel">Crear Usuario</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-
                     <form id="createUserForm" action="/create" method="POST">
                         <div class="mb-3">
                             <label for="userName" class="form-label">Nombre</label>
-                            <input type="text" name="nombre" class="form-control" id="userName" required>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" name="nombre" class="form-control" id="userName" placeholder="Ingrese su nombre" required>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="userEmail" class="form-label">Email</label>
-                            <input type="email" name="correo" class="form-control" id="userEmail" required>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" name="correo" class="form-control" id="userEmail" placeholder="Ingrese su email" required>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label for="userPassword" class="form-label">Telefono</label>
-                            <input type="tel" name="telefono" class="form-control" id="userTelefono" required>
+                            <label for="userTelefono" class="form-label">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="tel" name="telefono" class="form-control" id="userTelefono" placeholder="Ingrese su teléfono" required>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Crear Usuario</button>
+                        <div class="mb-3">
+                            <label for="userPassword" class="form-label">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" name="password" class="form-control" id="userPassword" placeholder="Cree una contraseña" required>
+                            </div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                            <label class="form-check-label" for="termsCheck">
+                                Acepto los <a href="#" class="text-decoration-none">términos y condiciones</a>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-user-plus me-2"></i>Crear Usuario
+                        </button>
                     </form>
-                    
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <p class="mb-0">¿Ya tienes una cuenta? <a href="#" id="switchToLogin" class="text-decoration-none">Iniciar Sesión</a></p>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal de Iniciar Sesión -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginModalLabel">Iniciar Sesión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm" action="#" method="POST">
+                        <div class="mb-3">
+                            <label for="loginEmail" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" name="email" class="form-control" id="loginEmail" placeholder="Ingrese su email" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" name="password" class="form-control" id="loginPassword" placeholder="Ingrese su contraseña" required>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">Recordarme</label>
+                            </div>
+                            <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </button>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <p class="mb-0">¿No tienes una cuenta? <a href="#" id="switchToCreateUser" class="text-decoration-none">Crear Usuario</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script>
-        AOS.init({
-            duration: 1000,
-            once: true,
-        });
-
-        // Coordenadas de Avenida Emilio Civit 120, Mendoza, Argentina
-        const hotelLatitude = -32.88789;
-        const hotelLongitude = -68.855;
-
-        // Inicializar el mapa
-        const map = L.map('map').setView([hotelLatitude, hotelLongitude], 15);
-
-        // Agregar capa de OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // Agregar un marcador para el hotel
-        L.marker([hotelLatitude, hotelLongitude])
-            .addTo(map)
-            .bindPopup('Hotelituss<br>Avenida Emilio Civit 367<br>Mendoza, Argentina')
-            .openPopup();
-
-        document.getElementById('darkModeToggle').addEventListener('click', function() {
-            document.body.classList.toggle('dark-mode');
-            const icon = this.querySelector('i');
-            if (document.body.classList.contains('dark-mode')) {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-            } else {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
-            }
-        });
-
-        // Manejar la apertura del modal
-        document.getElementById('createUserLink').addEventListener('click', function(e) {
-            e.preventDefault();
-            var myModal = new bootstrap.Modal(document.getElementById('createUserModal'));
-            myModal.show();
-        });
-
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
-
