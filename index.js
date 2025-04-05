@@ -32,12 +32,10 @@ app.get('/', async (req, res) => {
 
 
 app.post('/create', async (req, res) => {
-
     const { nombre, correo, telefono } = req.body;
     const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono) VALUES ($1, $2, $3); " , [nombre, correo, telefono])
-    res.redirect('/'); //funcion para llevar de vuelta a la pagina de inicio
+    res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
     // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
-
 });
 
 
@@ -63,5 +61,6 @@ pool.connect()
   .catch(err => console.error("❌ Error al conectar con PostgreSQL:", err));
 
 
+  
 app.listen(3000)
 console.log("server on port ", 3000)
