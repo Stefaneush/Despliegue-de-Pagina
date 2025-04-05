@@ -32,8 +32,8 @@ app.get('/', async (req, res) => {
 
 
 app.post('/create', async (req, res) => {
-    const { nombre, correo, telefono } = req.body;
-    const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono) VALUES ($1, $2, $3); " , [nombre, correo, telefono])
+    const { nombre, correo, telefono, contraseña } = req.body;
+    const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); " , [nombre, correo, telefono, contraseña])
     res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
     // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
 });
@@ -42,25 +42,18 @@ app.post('/create', async (req, res) => {
 //iniciar sesion
 app.post('/sesion', async (req, res) => {
 
-    console.log('Datos recibidos del login:', req.body); // 👈 Agregado
+    console.log('Datos recibidos del login:', req.body);
 
-    const { email } = req.body;
-
+    const { email, password } = req.body;
     try {
-      // Busca si el correo ingresado existe en la base de datos
-      const result = await pool.query(
-        'SELECT * FROM usuarios WHERE correo = $1',
-        [email]
-      );
+      const result = await pool.query('SELECT * FROM usuarios WHERE correo = $1 AND contraseña = $2',[email, password]);
   
       console.log("Resultado de búsqueda:", result.rows);
   
       if (result.rows.length === 0) {
-        // Si no hay coincidencias, muestra error
-        return res.status(401).send('Correo no registrado');
+        return res.status(401).send('Correo o contraseña incorrectos');
       }
   
-      // Si encuentra el usuario, redirige al inicio
       return res.redirect('https://hotelituss1.vercel.app/');
       
     } catch (error) {
