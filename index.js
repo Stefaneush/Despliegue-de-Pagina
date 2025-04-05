@@ -39,6 +39,11 @@ app.post('/create', async (req, res) => {
 });
 
 
+app.post('/iniciar_sesion', async (req, res) => {
+    res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
+});
+
+
 
 app.get('/select', async (req, res) => {
     const result = await pool.query('SELECT * FROM usuarios')
