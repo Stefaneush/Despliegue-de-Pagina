@@ -41,14 +41,14 @@ app.post('/create', async (req, res) => {
 
 //iniciar sesion
 app.post('/sesion', async (req, res) => {
-  
+
   console.log('Datos recibidos del login:', req.body);
 
   const { email, password } = req.body;
 
   try {
     const result = await pool.query(
-      'SELECT * FROM usuarios WHERE correo = $1 AND contraseña = $2',
+      'SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2',
       [email, password]
     );
 
