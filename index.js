@@ -39,9 +39,36 @@ app.post('/create', async (req, res) => {
 });
 
 
+//iniciar sesion
 app.post('/sesion', async (req, res) => {
 
-    res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
+    console.log('Datos recibidos del login:', req.body); // 👈 Agregado
+
+    const { email } = req.body;
+
+    try {
+      // Busca si el correo ingresado existe en la base de datos
+      const result = await pool.query(
+        'SELECT * FROM usuarios WHERE correo = $1',
+        [email]
+      );
+  
+      console.log("Resultado de búsqueda:", result.rows);
+  
+      if (result.rows.length === 0) {
+        // Si no hay coincidencias, muestra error
+        return res.status(401).send('Correo no registrado');
+      }
+  
+      // Si encuentra el usuario, redirige al inicio
+      return res.redirect('https://hotelituss1.vercel.app/');
+      
+    } catch (error) {
+      console.error('Error en login:', error);
+      res.status(500).send('Error del servidor');
+    }
+
+    // res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
 });
 
 
