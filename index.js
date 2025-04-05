@@ -32,8 +32,8 @@ app.get('/', async (req, res) => {
 
 
 app.post('/create', async (req, res) => {
-    const { nombre, correo, telefono, contraseña } = req.body;
-    const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); " , [nombre, correo, telefono, contraseña])
+    const { nombre, correo, telefono, password} = req.body;
+    const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); " , [nombre, correo, telefono, password])
     res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
     // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
 });
@@ -46,7 +46,7 @@ app.post('/sesion', async (req, res) => {
 
     const { email, password } = req.body;
     try {
-      const result = await pool.query('SELECT * FROM usuarios WHERE correo = $1 AND contraseña = $2',[email, password]);
+      const result = await pool.query('SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2',[email, password]);
   
       console.log("Resultado de búsqueda:", result.rows);
   
