@@ -40,6 +40,9 @@ app.post('/create', async (req, res) => {
 
 
 app.post('/sesion', async (req, res) => {
+
+    const { email, password } = req.body;
+
     res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
 });
 
