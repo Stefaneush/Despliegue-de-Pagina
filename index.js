@@ -60,6 +60,7 @@ app.post('/sesion', async (req, res) => {
     console.error('Error en login:', error);
     return res.redirect('https://hotelituss1.vercel.app/?error=2');
   }
+    // res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta  a la pagina de inicio
 });
 
 
