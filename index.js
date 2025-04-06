@@ -92,7 +92,7 @@ app.post('/reservar', async (req, res) => {
       [usuario_id, habitacion_tipo, fecha_inicio, fecha_fin, estado || 'pendiente']
     );
 
-    res.send('<script>alert("¡Reserva realizada con éxito!"); window.location.href = "https://mi-hotel.vercel.app";</script>');
+    res.send('<script>alert("¡Reserva realizada con éxito!"); window.location.href = "https://hotelituss1.vercel.app/";</script>');
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al realizar la reserva');

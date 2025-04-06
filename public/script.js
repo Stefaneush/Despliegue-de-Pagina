@@ -494,6 +494,9 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
   
+
+
+  
   // Gestión de sesión de usuario
   document.addEventListener("DOMContentLoaded", () => {
     const loginLink = document.getElementById("loginLink")
