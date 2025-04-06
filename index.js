@@ -57,7 +57,7 @@ app.post('/sesion', async (req, res) => {
       return res.status(401).send('Correo o contraseña incorrectos');
     }
 
-    return res.redirect('https://hotelituss1.vercel.app/');
+    return res.redirect('https://hotelituss1.vercel.app/?logged=true');
     
   } catch (error) {
     console.error('Error en login:', error);
