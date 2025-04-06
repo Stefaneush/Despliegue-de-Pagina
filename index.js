@@ -41,21 +41,17 @@ app.post('/create', async (req, res) => {
 
 //iniciar sesion
 app.post('/sesion', async (req, res) => {
-
-  console.log('Datos recibidos del login:', req.body);
-
   const { email, password } = req.body;
 
   try {
     const result = await pool.query(
-      'SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2',
+      'SELECT * FROM usuarios WHERE correo = $1 AND contraseña = $2',
       [email, password]
     );
 
-    console.log("Resultado de búsqueda:", result.rows);
-
     if (result.rows.length === 0) {
-      return res.status(401).send('Correo o contraseña incorrectos');
+      // Redirige al frontend con el parámetro de error
+      return res.redirect('https://hotelituss1.vercel.app/?error=1');
     }
 
     return res.redirect('https://hotelituss1.vercel.app/');
@@ -64,7 +60,6 @@ app.post('/sesion', async (req, res) => {
     console.error('Error en login:', error);
     res.status(500).send('Error del servidor');
   }
-    // res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta  a la pagina de inicio
 });
 
 

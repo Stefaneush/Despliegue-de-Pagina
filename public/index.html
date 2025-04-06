@@ -944,5 +944,30 @@
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="script.js"></script>
+
+    <script>
+        // Verifica si hay un parámetro "error=1" en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get("error");
+      
+        if (error === "1") {
+          // Espera que el DOM cargue y luego muestra el modal con mensaje
+          window.addEventListener("DOMContentLoaded", () => {
+            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+      
+            // Mostrar alerta dentro del modal
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger mt-3';
+            alertDiv.textContent = 'Credenciales incorrectas';
+      
+            const modalBody = document.querySelector('#loginModal .modal-body');
+            modalBody.prepend(alertDiv);
+          });
+        }
+      </script>
+
+
+
 </body>
 </html>
