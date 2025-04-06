@@ -100,26 +100,34 @@ function initMap() {
 
 
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Si se accede con ?logged=true en la URL, guardar sesión en localStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const loggedIn = urlParams.get('logged');
-
-    if (loggedIn === 'true') {
-      localStorage.setItem('userLoggedIn', 'true');
-      // Limpiar la URL
-      window.history.replaceState({}, document.title, "/");
-    }
-
-    // Ocultar botones si el usuario está logueado
-    if (localStorage.getItem('userLoggedIn') === 'true') {
+    document.addEventListener('DOMContentLoaded', function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const loggedIn = urlParams.get('logged');
+  
+      // Si viene desde el login exitoso
+      if (loggedIn === 'true') {
+        localStorage.setItem('userLoggedIn', 'true');
+        // Limpiar la URL para que no quede ?logged=true visible
+        window.history.replaceState({}, document.title, "/");
+      }
+  
+      // Obtener los elementos
       const loginBtn = document.getElementById('loginBtn');
       const createUserBtn = document.getElementById('createUserBtn');
-
-      if (loginBtn) loginBtn.style.display = 'none';
-      if (createUserBtn) createUserBtn.style.display = 'none';
+      const logoutBtn = document.getElementById('logoutBtn');
+  
+      // Si el usuario está logueado, ocultar login y crear, mostrar logout
+      if (localStorage.getItem('userLoggedIn') === 'true') {
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (createUserBtn) createUserBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+      }
+    });
+  
+    function logout() {
+      localStorage.removeItem('userLoggedIn');
+      window.location.reload(); // o podés redirigir con window.location.href = "/";
     }
-  });
 
 
 
@@ -128,8 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-
-
+    
 
 
 
