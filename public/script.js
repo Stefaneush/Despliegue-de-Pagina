@@ -494,31 +494,6 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
   // Gestión de sesión de usuario
   document.addEventListener("DOMContentLoaded", () => {
     const loginLink = document.getElementById("loginLink")
@@ -534,27 +509,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.history.replaceState({}, document.title, "/") // Limpiar la URL
     }
   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Mostrar u ocultar botones según estado
     const isLogged = localStorage.getItem("userLoggedIn") === "true"
   
@@ -566,23 +520,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (logoutBtn) logoutBtn.style.display = "none"
     }
   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Función para cerrar sesión
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => {
