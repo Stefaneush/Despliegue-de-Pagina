@@ -408,20 +408,20 @@
 
             <div class="row justify-content-center">
                 <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
-                    <form class="reservation-form">
+                    <form class="reservation-form" action="/reservar" method="POST">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="checkIn" class="form-label">Fecha de entrada</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                    <input type="date" class="form-control" id="checkIn" required>
+                                    <input type="date" class="form-control" id="checkIn" name="fecha_inicio" required>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="checkOut" class="form-label">Fecha de salida</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                    <input type="date" class="form-control" id="checkOut" required>
+                                    <input type="date" class="form-control" id="checkOut" name="fecha_fin" required>
                                 </div>
                             </div>
                         </div>
@@ -430,11 +430,11 @@
                                 <label for="roomType" class="form-label">Tipo de habitación</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-bed"></i></span>
-                                    <select class="form-select" id="roomType" required>
+                                    <select class="form-select" id="roomType" name="habitacion_tipo" required>
                                         <option value="">Seleccionar...</option>
-                                        <option value="individual">Habitación Individual</option>
-                                        <option value="doble">Habitación Doble</option>
-                                        <option value="suite">Suite Ejecutiva</option>
+                                        <option value="1">Habitación Individual</option>
+                                        <option value="2">Habitación Doble</option>
+                                        <option value="3">Suite Ejecutiva</option>
                                     </select>
                                 </div>
                             </div>
@@ -442,7 +442,7 @@
                                 <label for="guests" class="form-label">Número de huéspedes</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
-                                    <input type="number" class="form-control" id="guests" min="1" max="4" required>
+                                    <input type="number" class="form-control" id="guests" name="huespedes" min="1" max="4" required>
                                 </div>
                             </div>
                         </div>
@@ -451,27 +451,24 @@
                                 <label for="name" class="form-label">Nombre completo</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                    <input type="text" class="form-control" id="name" placeholder="Ingrese su nombre" required>
+                                    <input type="text" class="form-control" id="name" name="nombre" required>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="email" class="form-label">Correo electrónico</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                    <input type="email" class="form-control" id="email" placeholder="Ingrese su email" required>
+                                    <input type="email" class="form-control" id="email" name="correo" required>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="specialRequests" class="form-label">Solicitudes especiales</label>
-                            <textarea class="form-control" id="specialRequests" rows="3" placeholder="Indique cualquier solicitud especial que pueda tener"></textarea>
+                            <textarea class="form-control" id="specialRequests" name="estado" rows="3"></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg w-100">
                             <i class="fas fa-calendar-check me-2"></i>Reservar ahora
                         </button>
-                        <div class="reservation-info mt-3">
-                            <small><i class="fas fa-info-circle me-1"></i> No se realizará ningún cargo hasta confirmar la reserva</small>
-                        </div>
                     </form>
                 </div>
             </div>
@@ -880,6 +877,7 @@
                 </div>
                 <div class="modal-body">
                     <form id="loginForm" action="https://hotelitus.onrender.com/sesion" method="POST">
+                    <form id="loginForm">
                         <div class="mb-3">
                             <label for="loginEmail" class="form-label">Email</label>
                             <div class="input-group">

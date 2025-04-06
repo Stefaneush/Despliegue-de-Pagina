@@ -68,6 +68,49 @@ app.post('/sesion', async (req, res) => {
 
 
 
+app.post('/reservar', async (req, res) => {
+  const { nombre, correo, fecha_inicio, fecha_fin, habitacion_tipo, estado } = req.body;
+
+  try {
+    // Buscar o crear usuario
+    let usuario = await pool.query('SELECT id FROM usuarios WHERE correo = $1', [correo]);
+    let usuario_id;
+
+    if (usuario.rows.length === 0) {
+      const insertUser = await pool.query(
+        'INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id',
+        [nombre, correo, 'default123'] // contraseña por defecto, ideal cambiar luego
+      );
+      usuario_id = insertUser.rows[0].id;
+    } else {
+      usuario_id = usuario.rows[0].id;
+    }
+
+    // Insertar reserva
+    await pool.query(
+      'INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5)',
+      [usuario_id, habitacion_tipo, fecha_inicio, fecha_fin, estado || 'pendiente']
+    );
+
+    res.send('<script>alert("¡Reserva realizada con éxito!"); window.location.href="/";</script>');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al realizar la reserva');
+  }
+});
+
+
+// select de reserva para comprobar
+app.get('/select_reserva', async (req, res) => {
+  const result = await pool.query('SELECT * FROM reservas')
+  return res.json(result.rows)
+});
+
+
+
+
+
+
 app.get('/select', async (req, res) => {
     const result = await pool.query('SELECT * FROM usuarios')
     return res.json(result.rows)
