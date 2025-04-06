@@ -427,6 +427,29 @@ function handleNavbarScroll() {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
  * Configura la funcionalidad de login/logout
  */
@@ -465,6 +488,26 @@ function setupLoginLogout() {
         });
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Configura las funciones de API del backend
@@ -535,3 +578,19 @@ function setupBackendAPI() {
         });
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
