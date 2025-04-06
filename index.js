@@ -52,6 +52,7 @@ app.post('/sesion', async (req, res) => {
     if (result.rows.length === 0) {
       // Redirige al frontend con el parámetro de error
       return res.redirect('https://hotelituss1.vercel.app/?error=1');
+      return res.status(401).send('Correo o contraseña incorrectos.');
     }
 
     return res.redirect('https://hotelituss1.vercel.app/');
