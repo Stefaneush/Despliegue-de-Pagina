@@ -1,534 +1,619 @@
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener("DOMContentLoaded", () => {
-    // Inicializar AOS (Animate On Scroll)
-    initAOS()
-  
-    // Inicializar el mapa si existe el elemento
-    initMap()
-  
-    // Configurar el modo oscuro
-    setupDarkMode()
-  
-    // Configurar el botón de volver arriba
-    setupBackToTop()
-  
-    // Configurar navegación suave
-    setupSmoothScrolling()
-  
-    // Configurar modales
-    setupModals()
-  
-    // Configurar validación de formularios
-    setupFormValidation()
-  
-    // Inicializar tooltips de Bootstrap
-    initTooltips()
-  
-    // Configurar animación de contadores
-    setupCounterAnimation()
-  
-    // Manejar navegación responsiva
-    handleResponsiveNav()
-  
-    // Detectar scroll para cambiar estilo de navbar
-    handleNavbarScroll()
-  })
-  
-  /**
-   * Inicializa la biblioteca AOS para animaciones al hacer scroll
-   */
-  function initAOS() {
-    if (typeof AOS !== "undefined") {
-      AOS.init({
-        duration: 1000,
-        once: true,
-        offset: 100,
-      })
-    } else {
-      console.warn("AOS is not defined. Make sure it is properly imported.")
+  // Inicializar AOS (Animate On Scroll)
+  initAOS()
+
+  // Inicializar el mapa si existe el elemento
+  initMap()
+
+  // Configurar el modo oscuro
+  setupDarkMode()
+
+  // Configurar el botón de volver arriba
+  setupBackToTop()
+
+  // Configurar navegación suave
+  setupSmoothScrolling()
+
+  // Configurar modales
+  setupModals()
+
+  // Configurar validación de formularios
+  setupFormValidation()
+
+  // Inicializar tooltips de Bootstrap
+  initTooltips()
+
+  // Configurar animación de contadores
+  setupCounterAnimation()
+
+  // Manejar navegación responsiva
+  handleResponsiveNav()
+
+  // Detectar scroll para cambiar estilo de navbar
+  handleNavbarScroll()
+})
+
+/**
+ * Inicializa la biblioteca AOS para animaciones al hacer scroll
+ */
+function initAOS() {
+  if (typeof AOS !== "undefined") {
+    AOS.init({
+      duration: 1000,
+      once: true,
+      offset: 100,
+    })
+  } else {
+    console.warn("AOS is not defined. Make sure it is properly imported.")
+  }
+}
+
+/**
+ * Inicializa el mapa de Leaflet si existe el elemento en la página
+ */
+function initMap() {
+  // Coordenadas de Avenida Emilio Civit 367, Mendoza, Argentina
+  const hotelLatitude = -32.88789
+  const hotelLongitude = -68.855
+
+  const mapElement = document.getElementById("map")
+  if (mapElement) {
+    try {
+      if (typeof L !== "undefined") {
+        const map = L.map("map").setView([hotelLatitude, hotelLongitude], 15)
+
+        // Agregar capa de OpenStreetMap
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map)
+
+        // Agregar un marcador para el hotel
+        const hotelIcon = L.icon({
+          iconUrl: "https://cdn.mapmarker.io/api/v1/pin?size=50&background=%23c8a97e&icon=fa-hotel&color=%23FFFFFF",
+          iconSize: [50, 50],
+          iconAnchor: [25, 50],
+          popupAnchor: [0, -50],
+        })
+
+        L.marker([hotelLatitude, hotelLongitude], { icon: hotelIcon })
+          .addTo(map)
+          .bindPopup("<strong>Hotelituss</strong><br>Avenida Emilio Civit 367<br>Mendoza, Argentina")
+          .openPopup()
+
+        // Forzar actualización del mapa después de que se cargue completamente
+        setTimeout(() => {
+          map.invalidateSize()
+        }, 500)
+      } else {
+        console.warn("Leaflet (L) is not defined. Make sure it is properly imported.")
+      }
+    } catch (error) {
+      console.error("Error al inicializar el mapa:", error)
     }
   }
-  
-  /**
-   * Inicializa el mapa de Leaflet si existe el elemento en la página
-   */
-  function initMap() {
-    // Coordenadas de Avenida Emilio Civit 367, Mendoza, Argentina
-    const hotelLatitude = -32.88789
-    const hotelLongitude = -68.855
-  
-    const mapElement = document.getElementById("map")
-    if (mapElement) {
-      try {
-        if (typeof L !== "undefined") {
-          const map = L.map("map").setView([hotelLatitude, hotelLongitude], 15)
-  
-          // Agregar capa de OpenStreetMap
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          }).addTo(map)
-  
-          // Agregar un marcador para el hotel
-          const hotelIcon = L.icon({
-            iconUrl: "https://cdn.mapmarker.io/api/v1/pin?size=50&background=%23c8a97e&icon=fa-hotel&color=%23FFFFFF",
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50],
-          })
-  
-          L.marker([hotelLatitude, hotelLongitude], { icon: hotelIcon })
-            .addTo(map)
-            .bindPopup("<strong>Hotelituss</strong><br>Avenida Emilio Civit 367<br>Mendoza, Argentina")
-            .openPopup()
-  
-          // Forzar actualización del mapa después de que se cargue completamente
-          setTimeout(() => {
-            map.invalidateSize()
-          }, 500)
-        } else {
-          console.warn("Leaflet (L) is not defined. Make sure it is properly imported.")
-        }
-      } catch (error) {
-        console.error("Error al inicializar el mapa:", error)
+}
+
+/**
+ * Configura la funcionalidad del modo oscuro
+ */
+function setupDarkMode() {
+  const darkModeToggle = document.getElementById("darkModeToggle")
+
+  if (darkModeToggle) {
+    // Hacer visible el botón inmediatamente sin esperar ninguna condición
+    darkModeToggle.style.opacity = "1"
+    darkModeToggle.style.visibility = "visible"
+
+    darkModeToggle.addEventListener("click", function () {
+      document.body.classList.toggle("dark-mode")
+      const icon = this.querySelector("i")
+
+      if (document.body.classList.contains("dark-mode")) {
+        icon.classList.remove("fa-moon")
+        icon.classList.add("fa-sun")
+        localStorage.setItem("darkMode", "enabled")
+      } else {
+        icon.classList.remove("fa-sun")
+        icon.classList.add("fa-moon")
+        localStorage.setItem("darkMode", "disabled")
+      }
+    })
+
+    // Verificar preferencia de modo oscuro guardada
+    if (localStorage.getItem("darkMode") === "enabled") {
+      document.body.classList.add("dark-mode")
+      const icon = darkModeToggle.querySelector("i")
+      if (icon) {
+        icon.classList.remove("fa-moon")
+        icon.classList.add("fa-sun")
       }
     }
   }
-  
-  /**
-   * Configura la funcionalidad del modo oscuro
-   */
-  function setupDarkMode() {
-    const darkModeToggle = document.getElementById("darkModeToggle")
-  
-    if (darkModeToggle) {
-      darkModeToggle.addEventListener("click", function () {
-        document.body.classList.toggle("dark-mode")
-        const icon = this.querySelector("i")
-  
-        if (document.body.classList.contains("dark-mode")) {
-          icon.classList.remove("fa-moon")
-          icon.classList.add("fa-sun")
-          localStorage.setItem("darkMode", "enabled")
-        } else {
-          icon.classList.remove("fa-sun")
-          icon.classList.add("fa-moon")
-          localStorage.setItem("darkMode", "disabled")
-        }
-      })
-  
-      // Verificar preferencia de modo oscuro guardada
-      if (localStorage.getItem("darkMode") === "enabled") {
-        document.body.classList.add("dark-mode")
-        const icon = darkModeToggle.querySelector("i")
-        if (icon) {
-          icon.classList.remove("fa-moon")
-          icon.classList.add("fa-sun")
-        }
+}
+
+/**
+ * Configura el botón de volver arriba
+ */
+function setupBackToTop() {
+  const backToTopButton = document.getElementById("backToTop")
+
+  if (backToTopButton) {
+    // Mostrar/ocultar botón según la posición de scroll
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 300) {
+        backToTopButton.classList.add("show")
+      } else {
+        backToTopButton.classList.remove("show")
       }
+    })
+
+    // Acción de volver arriba al hacer clic
+    backToTopButton.addEventListener("click", () => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
+    })
+
+    // Verificar posición inicial
+    if (window.scrollY > 300) {
+      backToTopButton.classList.add("show")
     }
   }
-  
-  /**
-   * Configura el botón de volver arriba
-   */
-  function setupBackToTop() {
-    const backToTopButton = document.getElementById("backToTop")
-  
-    if (backToTopButton) {
-      // Mostrar/ocultar botón según la posición de scroll
-      window.addEventListener("scroll", () => {
-        if (window.scrollY > 300) {
-          backToTopButton.classList.add("show")
-        } else {
-          backToTopButton.classList.remove("show")
-        }
-      })
-  
-      // Acción de volver arriba al hacer clic
-      backToTopButton.addEventListener("click", () => {
-        window.scrollTo({
-          top: 0,
+}
+
+/**
+ * Configura la navegación suave para enlaces internos
+ */
+function setupSmoothScrolling() {
+  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+    anchor.addEventListener("click", function (e) {
+      const href = this.getAttribute("href")
+      if (href !== "#" && document.querySelector(href)) {
+        e.preventDefault()
+        document.querySelector(href).scrollIntoView({
           behavior: "smooth",
         })
-      })
-    }
-  }
-  
-  /**
-   * Configura la navegación suave para enlaces internos
-   */
-  function setupSmoothScrolling() {
-    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-      anchor.addEventListener("click", function (e) {
-        const href = this.getAttribute("href")
-        if (href !== "#" && document.querySelector(href)) {
-          e.preventDefault()
-          document.querySelector(href).scrollIntoView({
-            behavior: "smooth",
-          })
-        }
-      })
-    })
-  }
-  
-  /**
-   * Configura los modales de inicio de sesión y creación de usuario
-   */
-  function setupModals() {
-    // Manejar la apertura del modal de crear usuario
-    const createUserLink = document.getElementById("createUserLink")
-    if (createUserLink) {
-      createUserLink.addEventListener("click", (e) => {
-        e.preventDefault()
-        if (typeof bootstrap !== "undefined") {
-          const createUserModal = new bootstrap.Modal(document.getElementById("createUserModal"))
-          createUserModal.show()
-        } else {
-          console.warn("Bootstrap is not defined. Make sure it is properly imported.")
-        }
-      })
-    }
-  
-    // Manejar la apertura del modal de iniciar sesión
-    const loginLink = document.getElementById("loginLink")
-    if (loginLink) {
-      loginLink.addEventListener("click", (e) => {
-        e.preventDefault()
-        if (typeof bootstrap !== "undefined") {
-          const loginModal = new bootstrap.Modal(document.getElementById("loginModal"))
-          loginModal.show()
-        } else {
-          console.warn("Bootstrap is not defined. Make sure it is properly imported.")
-        }
-      })
-    }
-  
-    // Cambiar de modal de inicio de sesión a crear usuario
-    const switchToCreateUser = document.getElementById("switchToCreateUser")
-    if (switchToCreateUser) {
-      switchToCreateUser.addEventListener("click", (e) => {
-        e.preventDefault()
-        if (typeof bootstrap !== "undefined") {
-          const loginModal = bootstrap.Modal.getInstance(document.getElementById("loginModal"))
-          if (loginModal) {
-            loginModal.hide()
-            setTimeout(() => {
-              const createUserModal = new bootstrap.Modal(document.getElementById("createUserModal"))
-              createUserModal.show()
-            }, 500)
-          }
-        } else {
-          console.warn("Bootstrap is not defined. Make sure it is properly imported.")
-        }
-      })
-    }
-  
-    // Cambiar de modal de crear usuario a inicio de sesión
-    const switchToLogin = document.getElementById("switchToLogin")
-    if (switchToLogin) {
-      switchToLogin.addEventListener("click", (e) => {
-        e.preventDefault()
-        if (typeof bootstrap !== "undefined") {
-          const createUserModal = bootstrap.Modal.getInstance(document.getElementById("createUserModal"))
-          if (createUserModal) {
-            createUserModal.hide()
-            setTimeout(() => {
-              const loginModal = new bootstrap.Modal(document.getElementById("loginModal"))
-              loginModal.show()
-            }, 500)
-          }
-        } else {
-          console.warn("Bootstrap is not defined. Make sure it is properly imported.")
-        }
-      })
-    }
-  }
-  
-  /**
-   * Configura la validación de formularios
-   */
-  function setupFormValidation() {
-    const forms = document.querySelectorAll(".needs-validation")
-    Array.from(forms).forEach((form) => {
-      form.addEventListener(
-        "submit",
-        (event) => {
-          if (!form.checkValidity()) {
-            event.preventDefault()
-            event.stopPropagation()
-          }
-          form.classList.add("was-validated")
-        },
-        false,
-      )
-    })
-  }
-  
-  /**
-   * Inicializa los tooltips de Bootstrap
-   */
-  function initTooltips() {
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    if (tooltipTriggerList.length > 0) {
-      try {
-        if (typeof bootstrap !== "undefined") {
-          const tooltipList = [...tooltipTriggerList].map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl))
-        } else {
-          console.warn("Bootstrap is not defined. Make sure it is properly imported.")
-        }
-      } catch (error) {
-        console.error("Error al inicializar tooltips:", error)
       }
+    })
+  })
+}
+
+/**
+ * Configura los modales de inicio de sesión y creación de usuario
+ */
+function setupModals() {
+  // Manejar la apertura del modal de crear usuario
+  const createUserLink = document.getElementById("createUserLink")
+  if (createUserLink) {
+    createUserLink.addEventListener("click", (e) => {
+      e.preventDefault()
+      if (typeof bootstrap !== "undefined") {
+        const createUserModal = new bootstrap.Modal(document.getElementById("createUserModal"))
+        createUserModal.show()
+      } else {
+        console.warn("Bootstrap is not defined. Make sure it is properly imported.")
+      }
+    })
+  }
+
+  // Manejar la apertura del modal de iniciar sesión
+  const loginLink = document.getElementById("loginLink")
+  if (loginLink) {
+    loginLink.addEventListener("click", (e) => {
+      e.preventDefault()
+      if (typeof bootstrap !== "undefined") {
+        const loginModal = new bootstrap.Modal(document.getElementById("loginModal"))
+        loginModal.show()
+      } else {
+        console.warn("Bootstrap is not defined. Make sure it is properly imported.")
+      }
+    })
+  }
+
+  // Cambiar de modal de inicio de sesión a crear usuario
+  const switchToCreateUser = document.getElementById("switchToCreateUser")
+  if (switchToCreateUser) {
+    switchToCreateUser.addEventListener("click", (e) => {
+      e.preventDefault()
+      if (typeof bootstrap !== "undefined") {
+        const loginModal = bootstrap.Modal.getInstance(document.getElementById("loginModal"))
+        if (loginModal) {
+          loginModal.hide()
+          setTimeout(() => {
+            const createUserModal = new bootstrap.Modal(document.getElementById("createUserModal"))
+            createUserModal.show()
+          }, 500)
+        }
+      } else {
+        console.warn("Bootstrap is not defined. Make sure it is properly imported.")
+      }
+    })
+  }
+
+  // Cambiar de modal de crear usuario a inicio de sesión
+  const switchToLogin = document.getElementById("switchToLogin")
+  if (switchToLogin) {
+    switchToLogin.addEventListener("click", (e) => {
+      e.preventDefault()
+      if (typeof bootstrap !== "undefined") {
+        const createUserModal = bootstrap.Modal.getInstance(document.getElementById("createUserModal"))
+        if (createUserModal) {
+          createUserModal.hide()
+          setTimeout(() => {
+            const loginModal = new bootstrap.Modal(document.getElementById("loginModal"))
+            loginModal.show()
+          }, 500)
+        }
+      } else {
+        console.warn("Bootstrap is not defined. Make sure it is properly imported.")
+      }
+    })
+  }
+}
+
+/**
+ * Configura la validación de formularios
+ */
+function setupFormValidation() {
+  const forms = document.querySelectorAll(".needs-validation")
+  Array.from(forms).forEach((form) => {
+    form.addEventListener(
+      "submit",
+      (event) => {
+        if (!form.checkValidity()) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        form.classList.add("was-validated")
+      },
+      false,
+    )
+  })
+}
+
+/**
+ * Inicializa los tooltips de Bootstrap
+ */
+function initTooltips() {
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+  if (tooltipTriggerList.length > 0) {
+    try {
+      if (typeof bootstrap !== "undefined") {
+        const tooltipList = [...tooltipTriggerList].map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl))
+      } else {
+        console.warn("Bootstrap is not defined. Make sure it is properly imported.")
+      }
+    } catch (error) {
+      console.error("Error al inicializar tooltips:", error)
     }
   }
-  
-  /**
-   * Configura la animación de contadores para números
-   */
-  function setupCounterAnimation() {
-    // Función para animar contadores
-    function animateCounter(el, target) {
-      let count = 0
-      const speed = 2000 / target // 2 segundos para llegar al objetivo
-      const counter = setInterval(() => {
-        count++
-        el.textContent = count
-        if (count >= target) {
-          clearInterval(counter)
-        }
-      }, speed)
-    }
-  
-    // Iniciar animación cuando el elemento sea visible
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.target.classList.contains("years")) {
-            const targetValue = Number.parseInt(entry.target.textContent) || 0
-            if (targetValue > 0) {
-              animateCounter(entry.target, targetValue)
-              observer.unobserve(entry.target)
-            }
+}
+
+/**
+ * Configura la animación de contadores para números
+ */
+function setupCounterAnimation() {
+  // Función para animar contadores
+  function animateCounter(el, target) {
+    let count = 0
+    const speed = 2000 / target // 2 segundos para llegar al objetivo
+    const counter = setInterval(() => {
+      count++
+      el.textContent = count
+      if (count >= target) {
+        clearInterval(counter)
+      }
+    }, speed)
+  }
+
+  // Iniciar animación cuando el elemento sea visible
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.target.classList.contains("years")) {
+          const targetValue = Number.parseInt(entry.target.textContent) || 0
+          if (targetValue > 0) {
+            animateCounter(entry.target, targetValue)
+            observer.unobserve(entry.target)
           }
-        })
-      })
-  
-      document.querySelectorAll(".years").forEach((el) => {
-        observer.observe(el)
-      })
-    } else {
-      // Fallback para navegadores que no soportan IntersectionObserver
-      document.querySelectorAll(".years").forEach((el) => {
-        const targetValue = Number.parseInt(el.textContent) || 0
-        if (targetValue > 0) {
-          animateCounter(el, targetValue)
         }
       })
-    }
+    })
+
+    document.querySelectorAll(".years").forEach((el) => {
+      observer.observe(el)
+    })
+  } else {
+    // Fallback para navegadores que no soportan IntersectionObserver
+    document.querySelectorAll(".years").forEach((el) => {
+      const targetValue = Number.parseInt(el.textContent) || 0
+      if (targetValue > 0) {
+        animateCounter(el, targetValue)
+      }
+    })
   }
-  
-  /**
-   * Maneja la navegación responsiva
-   */
-  function handleResponsiveNav() {
-    const navbarToggler = document.querySelector(".navbar-toggler")
-    const navbarCollapse = document.querySelector(".navbar-collapse")
-  
-    if (navbarToggler && navbarCollapse) {
-      // Cerrar menú al hacer clic en un enlace en móvil
-      document.querySelectorAll(".navbar-nav .nav-link").forEach((link) => {
-        link.addEventListener("click", () => {
-          if (window.innerWidth < 992) {
-            try {
-              if (typeof bootstrap !== "undefined") {
-                const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse)
-                if (bsCollapse) {
-                  bsCollapse.hide()
-                }
-              } else {
-                console.warn("Bootstrap is not defined. Make sure it is properly imported.")
-                navbarCollapse.classList.remove("show")
+}
+
+/**
+ * Maneja la navegación responsiva
+ */
+function handleResponsiveNav() {
+  const navbarToggler = document.querySelector(".navbar-toggler")
+  const navbarCollapse = document.querySelector(".navbar-collapse")
+
+  if (navbarToggler && navbarCollapse) {
+    // Cerrar menú al hacer clic en un enlace en móvil
+    document.querySelectorAll(".navbar-nav .nav-link").forEach((link) => {
+      link.addEventListener("click", () => {
+        if (window.innerWidth < 992) {
+          try {
+            if (typeof bootstrap !== "undefined") {
+              const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse)
+              if (bsCollapse) {
+                bsCollapse.hide()
               }
-            } catch (error) {
-              console.error("Error al cerrar el menú móvil:", error)
-              // Fallback manual si bootstrap no está disponible
+            } else {
+              console.warn("Bootstrap is not defined. Make sure it is properly imported.")
               navbarCollapse.classList.remove("show")
             }
+          } catch (error) {
+            console.error("Error al cerrar el menú móvil:", error)
+            // Fallback manual si bootstrap no está disponible
+            navbarCollapse.classList.remove("show")
           }
-        })
-      })
-    }
-  }
-  
-  /**
-   * Detecta cuando la navbar debe cambiar de estilo al hacer scroll y actualiza el enlace activo
-   */
-  function handleNavbarScroll() {
-    const navbar = document.querySelector(".navbar")
-  
-    if (navbar) {
-      window.addEventListener("scroll", () => {
-        if (window.scrollY > 50) {
-          navbar.classList.add("scrolled")
-        } else {
-          navbar.classList.remove("scrolled")
         }
-  
-        // Actualizar el enlace activo basado en la posición de scroll
-        updateActiveNavLink()
       })
-  
-      // Aplicar clase inicial según la posición actual
+    })
+  }
+}
+
+/**
+ * Detecta cuando la navbar debe cambiar de estilo al hacer scroll y actualiza el enlace activo
+ */
+function handleNavbarScroll() {
+  const navbar = document.querySelector(".navbar")
+
+  if (navbar) {
+    window.addEventListener("scroll", () => {
       if (window.scrollY > 50) {
         navbar.classList.add("scrolled")
+      } else {
+        navbar.classList.remove("scrolled")
       }
-  
-      // Inicializar el enlace activo
+
+      // Actualizar el enlace activo basado en la posición de scroll
       updateActiveNavLink()
-    }
-  }
-  
-  /**
-   * Actualiza el enlace activo en la navegación basado en la posición de scroll
-   */
-  function updateActiveNavLink() {
-    // Obtener todas las secciones
-    const sections = document.querySelectorAll("section[id], header[id]")
-    const navLinks = document.querySelectorAll(".navbar-nav .nav-link:not(.btn)")
-  
-    // Determinar qué sección está actualmente visible
-    let currentSection = ""
-    const scrollPosition = window.scrollY + 200 // Offset para mejor detección
-  
-    sections.forEach((section) => {
-      const sectionTop = section.offsetTop
-      const sectionHeight = section.offsetHeight
-  
-      if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
-        currentSection = section.getAttribute("id")
-      }
     })
-  
-    // Actualizar la clase activa en los enlaces de navegación
+
+    // Aplicar clase inicial según la posición actual
+    if (window.scrollY > 50) {
+      navbar.classList.add("scrolled")
+    }
+
+    // Inicializar el enlace activo
+    updateActiveNavLink()
+  }
+}
+
+/**
+ * Actualiza el enlace activo en la navegación basado en la posición de scroll
+ */
+function updateActiveNavLink() {
+  // Obtener todas las secciones
+  const sections = document.querySelectorAll("section[id], header[id]")
+  const navLinks = document.querySelectorAll(".navbar-nav .nav-link:not(.btn)")
+
+  // Determinar qué sección está actualmente visible
+  let currentSection = ""
+  const scrollPosition = window.scrollY + 200 // Offset para mejor detección
+
+  sections.forEach((section) => {
+    const sectionTop = section.offsetTop
+    const sectionHeight = section.offsetHeight
+
+    if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+      currentSection = section.getAttribute("id")
+    }
+  })
+
+  // Actualizar la clase activa en los enlaces de navegación
+  navLinks.forEach((link) => {
+    link.classList.remove("active")
+    const href = link.getAttribute("href")
+    if (href === `#${currentSection}`) {
+      link.classList.add("active")
+    }
+  })
+
+  // Si estamos al principio de la página, activar el enlace de inicio
+  if (window.scrollY < 100) {
     navLinks.forEach((link) => {
       link.classList.remove("active")
-      const href = link.getAttribute("href")
-      if (href === `#${currentSection}`) {
+      if (link.getAttribute("href") === "#inicio") {
         link.classList.add("active")
       }
     })
-  
-    // Si estamos al principio de la página, activar el enlace de inicio
-    if (window.scrollY < 100) {
-      navLinks.forEach((link) => {
-        link.classList.remove("active")
-        if (link.getAttribute("href") === "#inicio") {
-          link.classList.add("active")
-        }
-      })
-    }
   }
-  
-  // URL base del backend en Render
-  const backendBaseUrl = "https://hotelitus.onrender.com"
-  
-  // Función para crear una nueva reserva (POST)
-  function createReserva(data) {
-    fetch(`${backendBaseUrl}/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    })
-      .then((response) => response.json())
-      .then((result) => {
-        console.log("✅ Reserva creada:", result)
-        alert("Reserva creada con éxito.")
-      })
-      .catch((error) => {
-        console.error("❌ Error al crear la reserva:", error)
-        alert("Error al crear la reserva.")
-      })
-  }
-  
-  // Función para obtener todas las reservas (GET)
-  function getReservas() {
-    fetch(`${backendBaseUrl}/select`)
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("📋 Reservas obtenidas:", data)
-        // TODO: mostrar los datos en una tabla o lista en el DOM
-      })
-      .catch((error) => {
-        console.error("❌ Error al obtener reservas:", error)
-        alert("Error al obtener reservas.")
-      })
-  }
-  
-  // Función para actualizar una reserva (GET con query params)
-  function updateReserva(id, nuevoNombre) {
-    fetch(`${backendBaseUrl}/update?id=${id}&nombre=${nuevoNombre}`)
-      .then((response) => response.json())
-      .then((result) => {
-        console.log("🔄 Reserva actualizada:", result)
-        alert("Reserva actualizada correctamente.")
-      })
-      .catch((error) => {
-        console.error("❌ Error al actualizar reserva:", error)
-        alert("Error al actualizar la reserva.")
-      })
-  }
-  
-  // Función para eliminar una reserva (GET con query param)
-  function deleteReserva(id) {
-    fetch(`${backendBaseUrl}/delete?id=${id}`)
-      .then((response) => response.json())
-      .then((result) => {
-        console.log("🗑️ Reserva eliminada:", result)
-        alert("Reserva eliminada correctamente.")
-      })
-      .catch((error) => {
-        console.error("❌ Error al eliminar reserva:", error)
-        alert("Error al eliminar la reserva.")
-      })
-  }
-  
+}
 
+// URL base del backend en Render
+const backendBaseUrl = "https://hotelitus.onrender.com"
 
-  
-  // Gestión de sesión de usuario
-  document.addEventListener("DOMContentLoaded", () => {
-    const loginLink = document.getElementById("loginLink")
-    const createUserLink = document.getElementById("createUserLink")
-    const logoutBtn = document.getElementById("logoutBtn")
-  
-    // Detectar si viene de un login exitoso con ?logged=true
-    const urlParams = new URLSearchParams(window.location.search)
-    const loggedIn = urlParams.get("logged")
-  
-    if (loggedIn === "true") {
-      localStorage.setItem("userLoggedIn", "true")
-      window.history.replaceState({}, document.title, "/") // Limpiar la URL
-    }
-  
-    // Mostrar u ocultar botones según estado
-    const isLogged = localStorage.getItem("userLoggedIn") === "true"
-  
-    if (isLogged) {
-      if (loginLink) loginLink.style.display = "none"
-      if (createUserLink) createUserLink.style.display = "none"
-      if (logoutBtn) logoutBtn.style.display = "inline-block"
-    } else {
-      if (logoutBtn) logoutBtn.style.display = "none"
-    }
-  
-    // Función para cerrar sesión
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", () => {
-        localStorage.removeItem("userLoggedIn")
-        window.location.reload() // Refresca la página
-      })
-    }
+// Función para crear una nueva reserva (POST)
+function createReserva(data) {
+  fetch(`${backendBaseUrl}/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
   })
-  
+    .then((response) => response.json())
+    .then((result) => {
+      console.log("✅ Reserva creada:", result)
+      alert("Reserva creada con éxito.")
+    })
+    .catch((error) => {
+      console.error("❌ Error al crear la reserva:", error)
+      alert("Error al crear la reserva.")
+    })
+}
+
+// Función para obtener todas las reservas (GET)
+function getReservas() {
+  fetch(`${backendBaseUrl}/select`)
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("📋 Reservas obtenidas:", data)
+      // TODO: mostrar los datos en una tabla o lista en el DOM
+    })
+    .catch((error) => {
+      console.error("❌ Error al obtener reservas:", error)
+      alert("Error al obtener reservas.")
+    })
+}
+
+// Función para actualizar una reserva (GET con query params)
+function updateReserva(id, nuevoNombre) {
+  fetch(`${backendBaseUrl}/update?id=${id}&nombre=${nuevoNombre}`)
+    .then((response) => response.json())
+    .then((result) => {
+      console.log("🔄 Reserva actualizada:", result)
+      alert("Reserva actualizada correctamente.")
+    })
+    .catch((error) => {
+      console.error("❌ Error al actualizar reserva:", error)
+      alert("Error al actualizar la reserva.")
+    })
+}
+
+// Función para eliminar una reserva (GET con query param)
+function deleteReserva(id) {
+  fetch(`${backendBaseUrl}/delete?id=${id}`)
+    .then((response) => response.json())
+    .then((result) => {
+      console.log("🗑️ Reserva eliminada:", result)
+      alert("Reserva eliminada correctamente.")
+    })
+    .catch((error) => {
+      console.error("❌ Error al eliminar reserva:", error)
+      alert("Error al eliminar la reserva.")
+    })
+}
+
+// Gestión de sesión de usuario
+document.addEventListener("DOMContentLoaded", () => {
+  const loginLink = document.getElementById("loginLink")
+  const createUserLink = document.getElementById("createUserLink")
+  const logoutBtn = document.getElementById("logoutBtn")
+
+  // Detectar si viene de un login exitoso con ?logged=true
+  const urlParams = new URLSearchParams(window.location.search)
+  const loggedIn = urlParams.get("logged")
+
+  if (loggedIn === "true") {
+    localStorage.setItem("userLoggedIn", "true")
+    window.history.replaceState({}, document.title, "/") // Limpiar la URL
+  }
+
+  // Mostrar u ocultar botones según estado
+  const isLogged = localStorage.getItem("userLoggedIn") === "true"
+
+  if (isLogged) {
+    if (loginLink) loginLink.style.display = "none"
+    if (createUserLink) createUserLink.style.display = "none"
+    if (logoutBtn) logoutBtn.style.display = "inline-block"
+  } else {
+    if (logoutBtn) logoutBtn.style.display = "none"
+  }
+
+  // Función para cerrar sesión
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("userLoggedIn")
+      window.location.reload() // Refresca la página
+    })
+  }
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//logica para mostrar boton si el usuario esta logueado
+document.addEventListener("DOMContentLoaded", () => {
+    // Verificamos si el usuario está logueado con localStorage
+    const userId = localStorage.getItem("userId"); // Asegurate de guardar esto en login
+    if (userId) {
+      document.getElementById("navReservas").classList.remove("d-none");
+    }
+
+    // Al hacer clic en "Mis reservas"
+    document.getElementById("btnReservas").addEventListener("click", async (e) => {
+      e.preventDefault(); // Evita navegación
+
+      // Traer las reservas del usuario logueado
+      const response = await fetch("/mis-reservas");
+      const reservas = await response.json();
+
+      // Crear tabla y mostrarla (podés colocarlo en una sección o modal si querés)
+      let tablaHTML = `
+        <div class="container mt-4">
+          <h4>Mis Reservas</h4>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>ID</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      reservas.forEach(r => {
+        tablaHTML += `
+          <tr>
+            <td>${r.id}</td>
+            <td>${r.tipo}</td>
+            <td>${r.fecha_inicio}</td>
+            <td>${r.fecha_fin}</td>
+            <td>${r.estado}</td>
+          </tr>
+        `;
+      });
+
+      tablaHTML += `</tbody></table></div>`;
+      document.body.insertAdjacentHTML("beforeend", tablaHTML);
+    });
+  });
+
+
+
+
+
+
