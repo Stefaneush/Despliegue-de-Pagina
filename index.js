@@ -71,23 +71,21 @@ app.post('/sesion', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const result = await pool.query(
-      'SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2',
-      [email, password]
-    );
+        const userResult = await pool.query("SELECT * FROM usuarios WHERE correo = $1", [email]);
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ mensaje: "Credenciales incorrectas" });
+        }
 
-    console.log("Resultado de búsqueda:", result.rows);
+        const usuario = userResult.rows[0];
+        if (usuario.contrasena !== password) {
+            return res.status(401).json({ mensaje: "Credenciales incorrectas" });
+        }
 
-    if (result.rows.length === 0) {
-      return res.status(401).send('Correo o contraseña incorrectos');
+        res.json({ email: usuario.correo }); // o enviar más info si querés
+    } catch (error) {
+        console.error("Error al iniciar sesión:", error);
+        res.status(500).json({ mensaje: "Error del servidor" });
     }
-
-    return res.redirect('https://hotelituss1.vercel.app/?logged=true');
-    
-  } catch (error) {
-    console.error('Error en login:', error);
-    res.status(500).send('Error del servidor');
-  }
 });
 
 
