@@ -1,5 +1,5 @@
 import express, { query } from 'express';
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 import {config} from 'dotenv';
 import pg from 'pg';
 
@@ -33,23 +33,28 @@ app.get('/', async (req, res) => {
 
 
 app.post('/create', async (req, res) => {
-    const { nombre, correo, telefono, password} = req.body;
-    const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); " , [nombre, correo, telefono, password])
- 
-    const nodemailer = require("nodemailer");
+    const { nombre, correo, telefono, password } = req.body;
 
-    const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "gmorodscs@gmail.com",         // Reemplazá con tu Gmail
-    pass: "pyfn nzfv gbat wciz"          // Reemplazá con tu clave generada
-  }
-     
-});
+    try {
+        // Guardar en DB
+        await pool.query(
+            "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
+            [nombre, correo, telefono, password]
+        );
 
- const mailOptions = {
+        // Configurar transporte
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "gmorodscs@gmail.com",
+                pass: "pyfn nzfv gbat wciz"
+            }
+        });
+
+        // Correo
+        const mailOptions = {
             from: '"Hotelitus" <gmorodscs@gmail.com>',
-            to: correo, // el correo del nuevo usuario
+            to: correo,
             subject: '¡Bienvenido a Hotelitus!',
             html: `
                 <h2>Hola ${nombre} 👋</h2>
@@ -58,12 +63,15 @@ app.post('/create', async (req, res) => {
             `
         };
 
-        // Enviar el correo
+        // Enviar correo
         await transporter.sendMail(mailOptions);
- 
-    res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
-    // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
-});
+
+        // Redirigir al front
+        res.redirect('https://hotelituss1.vercel.app/');
+    } catch (error) {
+        console.error("Error creando usuario o enviando correo:", error);
+        res.status(500).send("Ocurrió un error al crear el usuario o enviar el correo");
+    }
 
 
 //iniciar sesion
