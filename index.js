@@ -125,6 +125,7 @@ app.post('/reservar', async (req, res) => {
 });
 
 
+
 // select de reserva para comprobar
 app.get('/select_reserva', async (req, res) => {
   const result = await pool.query('SELECT * FROM reservas')
