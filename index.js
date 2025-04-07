@@ -1,4 +1,5 @@
 import express, { query } from 'express';
+const nodemailer = require('nodemailer');
 import {config} from 'dotenv';
 import pg from 'pg';
 
@@ -34,6 +35,32 @@ app.get('/', async (req, res) => {
 app.post('/create', async (req, res) => {
     const { nombre, correo, telefono, password} = req.body;
     const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); " , [nombre, correo, telefono, password])
+ 
+    const nodemailer = require("nodemailer");
+
+    const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "gmorodscs@gmail.com",         // Reemplazá con tu Gmail
+    pass: "pyfn nzfv gbat wciz"          // Reemplazá con tu clave generada
+  }
+     
+});
+
+ const mailOptions = {
+            from: '"Hotelitus" <gmorodscs@gmail.com>',
+            to: correo, // el correo del nuevo usuario
+            subject: '¡Bienvenido a Hotelitus!',
+            html: `
+                <h2>Hola ${nombre} 👋</h2>
+                <p>Gracias por registrarte en <b>Hotelitus</b>. Estamos felices de tenerte aquí.</p>
+                <p>Tu usuario fue creado correctamente.</p>
+            `
+        };
+
+        // Enviar el correo
+        await transporter.sendMail(mailOptions);
+ 
     res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
     // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
 });
