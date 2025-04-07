@@ -77,17 +77,16 @@
     <!-- Hero Section -->
     <header id="inicio" class="hero">
         <div class="hero-overlay"></div>
-        <!-- Reemplazar las imágenes del carrusel con imágenes de mejor calidad -->
         <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" class="d-block w-100" alt="Vista exterior de Hotelituss">
+                    <img src="https://www.luxsphere.co/wp-content/uploads/One-Only-the-Palm-luxury-hotel-in-dubai-1-.jpg" class="d-block w-100" alt="Vista exterior de Hotelituss">
                 </div>
                 <div class="carousel-item">
-                    <img src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" class="d-block w-100" alt="Habitación de lujo con vista panorámica">
+                    <img src="https://dq5r178u4t83b.cloudfront.net/wp-content/uploads/sites/125/2020/06/15182916/Sofitel-Dubai-Wafi-Luxury-Room-Bedroom-Skyline-View-Image1_WEB.jpg" class="d-block w-100" alt="Habitación de lujo con vista panorámica">
                 </div>
                 <div class="carousel-item">
-                    <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80" class="d-block w-100" alt="Piscina infinita con vista al mar">
+                    <img src="https://media.architecturaldigest.com/photos/55e79210cd709ad62e90102f/master/pass/dam-images-travel-2015-hotel-pools-best-hotel-pools-01.jpg" class="d-block w-100" alt="Piscina infinita con vista al mar">
                 </div>
             </div>
             <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
@@ -409,7 +408,7 @@
 
             <div class="row justify-content-center">
                 <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
-                    <form class="reservation-form" action="https://hotelitus.onrender.com/reservar" method="POST">
+                    <form class="reservation-form" action="/reservar" method="POST">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="checkIn" class="form-label">Fecha de entrada</label>
@@ -803,12 +802,12 @@
     </footer>
 
     <!-- Botón de modo oscuro -->
-    <button id="darkModeToggle" class="btn position-fixed" aria-label="Cambiar modo oscuro/claro">
+    <button id="darkModeToggle" class="btn position-fixed bottom-0 end-0 m-3" aria-label="Cambiar modo oscuro/claro">
         <i class="fas fa-moon"></i>
     </button>
 
     <!-- Botón de volver arriba -->
-    <button id="backToTop" class="btn position-fixed" aria-label="Volver arriba">
+    <button id="backToTop" class="btn position-fixed bottom-0 end-0 m-3 me-5" aria-label="Volver arriba">
         <i class="fas fa-arrow-up"></i>
     </button>
 
@@ -877,7 +876,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+
                     <form id="loginForm" action="https://hotelitus.onrender.com/sesion" method="POST">
+=======
+                    <form id="loginForm">
+
+>>>>>>> 78af34e60f005325aa1a112faef8683dba411d9b
                         <div class="mb-3">
                             <label for="loginEmail" class="form-label">Email</label>
                             <div class="input-group">
