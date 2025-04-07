@@ -42,13 +42,13 @@ app.post('/create', async (req, res) => {
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-            user: "gmorodscs@gmail.com",
-            pass: "pyfn nzfv gbat wciz"
+            user: "infohotelituss@gmail.com",
+            pass: "pgfn jkao huuk czog"
         }
     }); // ← cierre correcto
 
     const mailOptions = {
-        from: '"Hotelitus" <gmorodscs@gmail.com>',
+        from: '"Hotelitus" <infohotelituss@gmail.com>',
         to: correo,
         subject: '¡Bienvenido a Hotelitus!',
         html: `
