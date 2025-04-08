@@ -1,7 +1,9 @@
-import express from "express"
-import { config } from "dotenv"
-import pg from "pg"
-import cors from "cors"
+import express, { query } from 'express';
+import {config} from 'dotenv';
+import pg from 'pg';
+import cors from 'cors';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 import path from "path" // Para manejar rutas (NUEVO)
 import { fileURLToPath } from "url" // Necesario para manejar __dirname (NUEVO)
@@ -12,7 +14,9 @@ config()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const app = express()
+
+const app = express();
+const usuariosPendientes = {};
 
 //usar cors para validar datos a traves de las paginas
 app.use(
@@ -38,34 +42,69 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-app.post("/create", async (req, res) => {
-  try {
-    const { nombre, correo, telefono, password } = req.body
-    console.log("Datos recibidos para crear usuario:", { nombre, correo, telefono, password: "***" })
+//Crear usuario
+app.post('/create', async (req, res) => {
+    const { nombre, correo, telefono, password } = req.body;
 
-    const result = await pool.query(
-      "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4) RETURNING id;",
-      [nombre, correo, telefono, password],
-    )
+    const codigo = crypto.randomInt(100000, 999999).toString(); // Código de 6 dígitos
 
-    console.log("Usuario creado con ID:", result.rows[0].id)
+    usuariosPendientes[correo] = { codigo, nombre, telefono, password };
 
-    // Responder según el tipo de solicitud
-    if (req.headers["content-type"] === "application/json") {
-      return res.status(201).json({ success: true, message: "Usuario creado exitosamente" })
-    } else {
-      return res.redirect("https://hotelituss1.vercel.app/")
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: "infohotelituss@gmail.com",
+            pass: "pgfn jkao huuk czog"
+        }
+    });
+
+    const mailOptions = {
+        from: '"Hotelitus" <infohotelituss@gmail.com>',
+        to: correo,
+        subject: 'Código de verificación - Hotelitus',
+        html: `
+            <h2>Hola ${nombre} 👋</h2>
+            <p>Tu código de verificación es:</p>
+            <h3>${codigo}</h3>
+            <p>Ingresa este código en el sitio para completar tu registro.</p>
+        `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Respondemos al frontend para mostrar el modal
+    res.json({ success: true });
+});
+
+//Verificar codigo
+app.post('/verify-code', async (req, res) => {
+    const { correo, codigo } = req.body;
+
+    const usuarioPendiente = usuariosPendientes[correo];
+
+    if (!usuarioPendiente) {
+        return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." });
     }
-  } catch (error) {
-    console.error("Error al crear usuario:", error)
 
-    if (req.headers["content-type"] === "application/json") {
-      return res.status(500).json({ success: false, message: "Error al crear usuario" })
-    } else {
-      return res.status(500).send("Error al crear usuario")
+    if (usuarioPendiente.codigo !== codigo) {
+        return res.status(401).json({ success: false, message: "Código incorrecto." });
     }
-  }
-})
+
+    // Código correcto, insertamos en la DB
+    const { nombre, telefono, password } = usuarioPendiente;
+
+    await pool.query(
+        "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
+        [nombre, correo, telefono, password]
+    );
+
+    // Eliminamos de la lista temporal
+    delete usuariosPendientes[correo];
+
+    res.json({ success: true });
+});
+
+
 
 //iniciar sesion
 app.post("/sesion", async (req, res) => {
@@ -175,7 +214,7 @@ pool
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`Servidor ejecutándose en el puerto ${PORT}`)
-})
+
+  
+app.listen(3000)
+console.log("server on port ", 3000)
