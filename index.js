@@ -70,6 +70,18 @@ app.post('/create', async (req, res) => {
     res.json({ success: true });
 });
 
+//Verificar codigo
+router.post('/verify-code', (req, res) => {
+  const { correo, codigo } = req.body;
+
+  if (verificationCodes[correo] === codigo) {
+    delete verificationCodes[correo]; // eliminar el código usado
+    return res.json({ success: true });
+  }
+
+  res.json({ success: false, message: 'Código incorrecto' });
+});
+
 
 
 //iniciar sesion
