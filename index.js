@@ -1,9 +1,12 @@
 import express, { query } from 'express';
 import {config} from 'dotenv';
 import pg from 'pg';
+const cors = require('cors');
+
+app.use(cors());
+
 import path from "path"; // Para manejar rutas (NUEVO)
 import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
-import nodemailer from 'nodemailer'; // Para los mails
 
 config()
  
@@ -32,35 +35,10 @@ app.get('/', async (req, res) => {
 
 
 app.post('/create', async (req, res) => {
-    const { nombre, correo, telefono, password } = req.body;
-
-    const result = await pool.query(
-        "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
-        [nombre, correo, telefono, password]
-    );
-
-    const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: "infohotelituss@gmail.com",
-            pass: "pgfn jkao huuk czog"
-        }
-    }); // ← cierre correcto
-
-    const mailOptions = {
-        from: '"Hotelitus" <infohotelituss@gmail.com>',
-        to: correo,
-        subject: '¡Bienvenido a Hotelitus!',
-        html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Gracias por registrarte en <b>Hotelitus</b>. Estamos felices de tenerte aquí.</p>
-            <p>Tu usuario fue creado correctamente.</p>
-        `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.redirect('https://hotelituss1.vercel.app/');
+    const { nombre, correo, telefono, password} = req.body;
+    const result = await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); " , [nombre, correo, telefono, password])
+    res.redirect('https://hotelituss1.vercel.app/'); //funcion para llevar de vuelta a la pagina de inicio
+    // res.send("El usuario ha sido creado exitosamente") funcion sin usar 
 });
 
 
@@ -123,7 +101,6 @@ app.post('/reservar', async (req, res) => {
     res.status(500).send('Error al realizar la reserva');
   }
 });
-
 
 
 // select de reserva para comprobar

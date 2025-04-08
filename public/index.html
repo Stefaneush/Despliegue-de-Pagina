@@ -65,10 +65,6 @@
                             <i class="fas fa-user-plus me-1"></i>Crear Usuario
                         </a>
                     </li>
-                    <!-- Botón de reservas visible SOLO cuando está logueado  NUEVO-->  
-                    <li class="nav-item d-none" id="navReservas">
-                          <a class="nav-link" href="#" id="btnReservas">Mis reservas</a>
-                    </li>
                     
                     <!-- Botón visible SOLO cuando está logueado -->
                    <button id="logoutBtn" class="btn btn-danger" style="display: none;">Cerrar sesión</button>
@@ -413,20 +409,20 @@
 
             <div class="row justify-content-center">
                 <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
-                    <form class="reservation-form" action="https://hotelitus.onrender.com/reservar" method="POST">
+                    <form class="reservation-form">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="checkIn" class="form-label">Fecha de entrada</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                    <input type="date" class="form-control" id="checkIn" name="fecha_inicio" required>
+                                    <input type="date" class="form-control" id="checkIn" required>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="checkOut" class="form-label">Fecha de salida</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                    <input type="date" class="form-control" id="checkOut" name="fecha_fin" required>
+                                    <input type="date" class="form-control" id="checkOut" required>
                                 </div>
                             </div>
                         </div>
@@ -435,11 +431,11 @@
                                 <label for="roomType" class="form-label">Tipo de habitación</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-bed"></i></span>
-                                    <select class="form-select" id="roomType" name="habitacion_tipo" required>
+                                    <select class="form-select" id="roomType" required>
                                         <option value="">Seleccionar...</option>
-                                        <option value="1">Habitación Individual</option>
-                                        <option value="2">Habitación Doble</option>
-                                        <option value="3">Suite Ejecutiva</option>
+                                        <option value="individual">Habitación Individual</option>
+                                        <option value="doble">Habitación Doble</option>
+                                        <option value="suite">Suite Ejecutiva</option>
                                     </select>
                                 </div>
                             </div>
@@ -447,7 +443,7 @@
                                 <label for="guests" class="form-label">Número de huéspedes</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
-                                    <input type="number" class="form-control" id="guests" name="huespedes" min="1" max="4" required>
+                                    <input type="number" class="form-control" id="guests" min="1" max="4" required>
                                 </div>
                             </div>
                         </div>
@@ -456,24 +452,27 @@
                                 <label for="name" class="form-label">Nombre completo</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                    <input type="text" class="form-control" id="name" name="nombre" required>
+                                    <input type="text" class="form-control" id="name" placeholder="Ingrese su nombre" required>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="email" class="form-label">Correo electrónico</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                    <input type="email" class="form-control" id="email" name="correo" required>
+                                    <input type="email" class="form-control" id="email" placeholder="Ingrese su email" required>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="specialRequests" class="form-label">Solicitudes especiales</label>
-                            <textarea class="form-control" id="specialRequests" name="estado" rows="3"></textarea>
+                            <textarea class="form-control" id="specialRequests" rows="3" placeholder="Indique cualquier solicitud especial que pueda tener"></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg w-100">
                             <i class="fas fa-calendar-check me-2"></i>Reservar ahora
                         </button>
+                        <div class="reservation-info mt-3">
+                            <small><i class="fas fa-info-circle me-1"></i> No se realizará ningún cargo hasta confirmar la reserva</small>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -816,62 +815,113 @@
         <i class="fas fa-arrow-up"></i>
     </button>
 
-    <!-- Modal de Crear Usuario -->
-    <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createUserModalLabel">Crear Usuario</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="createUserForm" action="https://hotelitus.onrender.com/create" method="POST">
-                        <div class="mb-3">
-                            <label for="userName" class="form-label">Nombre</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" name="nombre" class="form-control" id="userName" placeholder="Ingrese su nombre" required>
-                            </div>
+<!-- Modal de Crear Usuario -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createUserModalLabel">Crear Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createUserForm" action="https://hotelitus.onrender.com/create" method="POST">
+                    <div class="mb-3">
+                        <label for="userName" class="form-label">Nombre</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" name="nombre" class="form-control" id="userName" 
+                                   placeholder="Ingrese su nombre" 
+                                   pattern="[A-Za-zÁáÉéÍíÓóÚúÑñ\s]+" 
+                                   title="Por favor ingrese solo letras" 
+                                   required>
                         </div>
-                        <div class="mb-3">
-                            <label for="userEmail" class="form-label">Email</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input type="email" name="correo" class="form-control" id="userEmail" placeholder="Ingrese su email" required>
-                            </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userEmail" class="form-label">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" name="correo" class="form-control" id="userEmail" placeholder="Ingrese su email" required>
                         </div>
-                        <div class="mb-3">
-                            <label for="userTelefono" class="form-label">Teléfono</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                                <input type="tel" name="telefono" class="form-control" id="userTelefono" placeholder="Ingrese su teléfono" required>
-                            </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userTelefono" class="form-label">Teléfono</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                            <input type="tel" name="telefono" class="form-control" id="userTelefono" 
+                                   placeholder="Ingrese su teléfono" 
+                                   pattern="[0-9]+" 
+                                   title="Por favor ingrese solo números" 
+                                   required>
                         </div>
-                        <div class="mb-3">
-                            <label for="userPassword" class="form-label">Contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input type="password" name="password" class="form-control" id="userPassword" placeholder="Cree una contraseña" required>
-                            </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userPassword" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" name="password" class="form-control" id="userPassword" placeholder="Cree una contraseña" required>
                         </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="termsCheck" required>
-                            <label class="form-check-label" for="termsCheck">
-                                Acepto los <a href="#" class="text-decoration-none">términos y condiciones</a>
-                            </label>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-user-plus me-2"></i>Crear Usuario
-                        </button>
-                    </form>
-                </div>
-                <div class="modal-footer justify-content-center">
-                    <p class="mb-0">¿Ya tienes una cuenta? <a href="#" id="switchToLogin" class="text-decoration-none">Iniciar Sesión</a></p>
-                </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                        <label class="form-check-label" for="termsCheck">
+                            Acepto los <a href="#" class="text-decoration-none">términos y condiciones</a>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-user-plus me-2"></i>Crear Usuario
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <p class="mb-0">¿Ya tienes una cuenta? <a href="#" id="switchToLogin" class="text-decoration-none">Iniciar Sesión</a></p>
             </div>
         </div>
     </div>
+</div>
 
+<div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="verificationModalLabel">Verificación de código</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <div class="service-icon mb-3">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <p>Hemos enviado un código de verificación a tu correo electrónico. Por favor, introdúcelo a continuación:</p>
+        </div>
+        
+        <form id="verificationForm">
+          <div class="verification-code-container d-flex justify-content-center mb-4">
+            <input type="text" class="form-control verification-input me-2" maxlength="1" autofocus>
+            <input type="text" class="form-control verification-input me-2" maxlength="1">
+            <input type="text" class="form-control verification-input me-2" maxlength="1">
+            <input type="text" class="form-control verification-input me-2" maxlength="1">
+            <input type="text" class="form-control verification-input me-2" maxlength="1">
+            <input type="text" class="form-control verification-input" maxlength="1">
+          </div>
+          
+          <div class="text-center mb-3">
+            <div id="verification-error" class="text-danger mb-3" style="display: none;">
+              Código incorrecto. Por favor, inténtalo de nuevo.
+            </div>
+            <button type="submit" class="btn btn-primary">Verificar</button>
+          </div>
+          
+          <div class="text-center mt-3">
+            <p class="mb-0 text-muted">¿No has recibido el código? 
+              <a href="#" id="resendCode" class="text-primary">Reenviar código</a>
+            </p>
+            <div id="countdown" class="text-muted mt-2" style="display: none;"></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
     <!-- Modal de Iniciar Sesión -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -881,6 +931,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="loginErrorMsg" class="alert alert-danger d-none" role="alert">
+                      Credenciales incorrectas
+                    </div>
                     <form id="loginForm" action="https://hotelitus.onrender.com/sesion" method="POST">
                         <div class="mb-3">
                             <label for="loginEmail" class="form-label">Email</label>
@@ -903,10 +956,14 @@
                             </div>
                             <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
                         </div>
+                        
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                         </button>
                     </form>
+                    <div id="loginError" class="alert alert-danger mt-3 d-none" role="alert">
+                        Credenciales incorrectas.
+                    </div>
                 </div>
                 <div class="modal-footer justify-content-center">
                     <p class="mb-0">¿No tienes una cuenta? <a href="#" id="switchToCreateUser" class="text-decoration-none">Crear Usuario</a></p>

@@ -32,6 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Detectar scroll para cambiar estilo de navbar
   handleNavbarScroll()
+  
+  // Configurar validación de campos específicos
+  setupFieldValidation()
+  
+  // Gestión de sesión de usuario
+  setupUserSession()
 })
 
 /**
@@ -271,7 +277,54 @@ function setupFormValidation() {
       false,
     )
   })
+  
+  // Validación específica para el formulario de creación de usuario
+  const createUserForm = document.getElementById("createUserForm")
+  if (createUserForm) {
+    createUserForm.addEventListener("submit", function(event) {
+      // La validación de campos específicos se maneja en setupFieldValidation()
+      // Aquí solo verificamos si el formulario es válido en general
+      if (!this.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    })
+  }
 }
+
+/**
+ * Configura la validación de campos específicos (nombre y teléfono)
+ */
+function setupFieldValidation() {
+  // Validación para el campo de nombre (solo letras)
+  const nombreInput = document.getElementById("userName")
+  if (nombreInput) {
+    // Añadir atributos de validación
+    nombreInput.setAttribute("pattern", "[A-Za-zÁáÉéÍíÓóÚúÑñ\s]+")
+    nombreInput.setAttribute("title", "Por favor ingrese solo letras")
+    
+    // Validar mientras el usuario escribe
+    nombreInput.addEventListener("input", function() {
+      // Permitir letras, espacios y caracteres acentuados
+      this.value = this.value.replace(/[^A-Za-zÁáÉéÍíÓóÚúÑñ\s]/g, "")
+    })
+  }
+  
+  // Validación para el campo de teléfono (solo números)
+  const telefonoInput = document.getElementById("userTelefono")
+  if (telefonoInput) {
+    // Añadir atributos de validación
+    telefonoInput.setAttribute("pattern", "[0-9]+")
+    telefonoInput.setAttribute("title", "Por favor ingrese solo números")
+    
+    // Validar mientras el usuario escribe
+    telefonoInput.addEventListener("input", function() {
+      // Permitir solo números
+      this.value = this.value.replace(/[^0-9]/g, "")
+    })
+  }
+}
+
 
 /**
  * Inicializa los tooltips de Bootstrap
@@ -438,6 +491,43 @@ function updateActiveNavLink() {
   }
 }
 
+/**
+ * Configura la gestión de sesión de usuario
+ */
+function setupUserSession() {
+  const loginLink = document.getElementById("loginLink")
+  const createUserLink = document.getElementById("createUserLink")
+  const logoutBtn = document.getElementById("logoutBtn")
+
+  // Detectar si viene de un login exitoso con ?logged=true
+  const urlParams = new URLSearchParams(window.location.search)
+  const loggedIn = urlParams.get("logged")
+
+  if (loggedIn === "true") {
+    localStorage.setItem("userLoggedIn", "true")
+    window.history.replaceState({}, document.title, "/") // Limpiar la URL
+  }
+
+  // Mostrar u ocultar botones según estado
+  const isLogged = localStorage.getItem("userLoggedIn") === "true"
+
+  if (isLogged) {
+    if (loginLink) loginLink.style.display = "none"
+    if (createUserLink) createUserLink.style.display = "none"
+    if (logoutBtn) logoutBtn.style.display = "inline-block"
+  } else {
+    if (logoutBtn) logoutBtn.style.display = "none"
+  }
+
+  // Función para cerrar sesión
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("userLoggedIn")
+      window.location.reload() // Refresca la página
+    })
+  }
+}
+
 // URL base del backend en Render
 const backendBaseUrl = "https://hotelitus.onrender.com"
 
@@ -503,117 +593,34 @@ function deleteReserva(id) {
     })
 }
 
-// Gestión de sesión de usuario
-document.addEventListener("DOMContentLoaded", () => {
-  const loginLink = document.getElementById("loginLink")
-  const createUserLink = document.getElementById("createUserLink")
-  const logoutBtn = document.getElementById("logoutBtn")
-
-  // Detectar si viene de un login exitoso con ?logged=true
-  const urlParams = new URLSearchParams(window.location.search)
-  const loggedIn = urlParams.get("logged")
-
-  if (loggedIn === "true") {
-    localStorage.setItem("userLoggedIn", "true")
-    window.history.replaceState({}, document.title, "/") // Limpiar la URL
-  }
-
-  // Mostrar u ocultar botones según estado
-  const isLogged = localStorage.getItem("userLoggedIn") === "true"
-
-  if (isLogged) {
-    if (loginLink) loginLink.style.display = "none"
-    if (createUserLink) createUserLink.style.display = "none"
-    if (logoutBtn) logoutBtn.style.display = "inline-block"
-  } else {
-    if (logoutBtn) logoutBtn.style.display = "none"
-  }
-
-  // Función para cerrar sesión
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("userLoggedIn")
-      window.location.reload() // Refresca la página
-    })
-  }
-})
 
 
+document.getElementById("loginForm").addEventListener("submit", async function (e) {
+  e.preventDefault(); // Evita que el formulario se envíe normalmente
 
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  const errorContainer = document.getElementById("loginError");
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//logica para mostrar boton si el usuario esta logueado
-document.addEventListener("DOMContentLoaded", () => {
-    // Verificamos si el usuario está logueado con localStorage
-    const userId = localStorage.getItem("userId"); // Asegurate de guardar esto en login
-    if (userId) {
-      document.getElementById("navReservas").classList.remove("d-none");
-    }
-
-    // Al hacer clic en "Mis reservas"
-    document.getElementById("btnReservas").addEventListener("click", async (e) => {
-      e.preventDefault(); // Evita navegación
-
-      // Traer las reservas del usuario logueado
-      const response = await fetch("/mis-reservas");
-      const reservas = await response.json();
-
-      // Crear tabla y mostrarla (podés colocarlo en una sección o modal si querés)
-      let tablaHTML = `
-        <div class="container mt-4">
-          <h4>Mis Reservas</h4>
-          <table class="table table-bordered table-striped">
-            <thead>
-              <tr>
-                <th>ID</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      reservas.forEach(r => {
-        tablaHTML += `
-          <tr>
-            <td>${r.id}</td>
-            <td>${r.tipo}</td>
-            <td>${r.fecha_inicio}</td>
-            <td>${r.fecha_fin}</td>
-            <td>${r.estado}</td>
-          </tr>
-        `;
-      });
-
-      tablaHTML += `</tbody></table></div>`;
-      document.body.insertAdjacentHTML("beforeend", tablaHTML);
+  try {
+    const response = await fetch("https://hotelitus.onrender.com/sesion", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
     });
-  });
 
-
-
-
-
-
+    if (response.ok) {
+      localStorage.setItem("usuarioLogueado", email); // Guardamos la sesión
+      window.location.href = "https://hotelituss1.vercel.app/?logged=true";
+    } else if (response.status === 401) {
+      // Mostrar mensaje de credenciales incorrectas
+      errorContainer.classList.remove("d-none");
+    } else {
+      console.error("Error inesperado al iniciar sesión");
+    }
+  } catch (err) {
+    console.error("Error al enviar datos de inicio:", err);
+  }
+});
