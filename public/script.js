@@ -32,10 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Detectar scroll para cambiar estilo de navbar
   handleNavbarScroll()
-  
+
   // Configurar validación de campos específicos
   setupFieldValidation()
-  
+
   // Gestión de sesión de usuario
   setupUserSession()
 })
@@ -277,11 +277,11 @@ function setupFormValidation() {
       false,
     )
   })
-  
+
   // Validación específica para el formulario de creación de usuario
   const createUserForm = document.getElementById("createUserForm")
   if (createUserForm) {
-    createUserForm.addEventListener("submit", function(event) {
+    createUserForm.addEventListener("submit", function (event) {
       // La validación de campos específicos se maneja en setupFieldValidation()
       // Aquí solo verificamos si el formulario es válido en general
       if (!this.checkValidity()) {
@@ -300,31 +300,30 @@ function setupFieldValidation() {
   const nombreInput = document.getElementById("userName")
   if (nombreInput) {
     // Añadir atributos de validación
-    nombreInput.setAttribute("pattern", "[A-Za-zÁáÉéÍíÓóÚúÑñ\s]+")
+    nombreInput.setAttribute("pattern", "[A-Za-zÁáÉéÍíÓóÚúÑñs]+")
     nombreInput.setAttribute("title", "Por favor ingrese solo letras")
-    
+
     // Validar mientras el usuario escribe
-    nombreInput.addEventListener("input", function() {
+    nombreInput.addEventListener("input", function () {
       // Permitir letras, espacios y caracteres acentuados
       this.value = this.value.replace(/[^A-Za-zÁáÉéÍíÓóÚúÑñ\s]/g, "")
     })
   }
-  
+
   // Validación para el campo de teléfono (solo números)
   const telefonoInput = document.getElementById("userTelefono")
   if (telefonoInput) {
     // Añadir atributos de validación
     telefonoInput.setAttribute("pattern", "[0-9]+")
     telefonoInput.setAttribute("title", "Por favor ingrese solo números")
-    
+
     // Validar mientras el usuario escribe
-    telefonoInput.addEventListener("input", function() {
+    telefonoInput.addEventListener("input", function () {
       // Permitir solo números
       this.value = this.value.replace(/[^0-9]/g, "")
     })
   }
 }
-
 
 /**
  * Inicializa los tooltips de Bootstrap
@@ -593,34 +592,55 @@ function deleteReserva(id) {
     })
 }
 
+// Implementación mejorada del inicio de sesión con manejo de errores
+document.addEventListener("DOMContentLoaded", () => {
+  const loginForm = document.getElementById("loginForm")
 
+  if (loginForm) {
+    loginForm.addEventListener("submit", function (e) {
+      e.preventDefault()
 
-document.getElementById("loginForm").addEventListener("submit", async function (e) {
-  e.preventDefault(); // Evita que el formulario se envíe normalmente
+      // Mostrar indicador de carga
+      const submitBtn = this.querySelector('button[type="submit"]')
+      const originalBtnText = submitBtn.innerHTML
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...'
+      submitBtn.disabled = true
 
-  const email = document.getElementById("loginEmail").value;
-  const password = document.getElementById("loginPassword").value;
-  const errorContainer = document.getElementById("loginError");
+      // Ocultar mensajes de error previos
+      const errorMsg = document.getElementById("loginErrorMsg")
+      errorMsg.classList.add("d-none")
 
-  try {
-    const response = await fetch("https://hotelitus.onrender.com/sesion", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ email, password })
-    });
+      // Obtener datos del formulario
+      const email = document.getElementById("loginEmail").value
+      const password = document.getElementById("loginPassword").value
 
-    if (response.ok) {
-      localStorage.setItem("usuarioLogueado", email); // Guardamos la sesión
-      window.location.href = "https://hotelituss1.vercel.app/?logged=true";
-    } else if (response.status === 401) {
-      // Mostrar mensaje de credenciales incorrectas
-      errorContainer.classList.remove("d-none");
-    } else {
-      console.error("Error inesperado al iniciar sesión");
-    }
-  } catch (err) {
-    console.error("Error al enviar datos de inicio:", err);
+      // Usar XMLHttpRequest en lugar de fetch para mejor compatibilidad
+      const xhr = new XMLHttpRequest()
+      xhr.open("POST", "https://hotelitus.onrender.com/sesion", true)
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          // Restaurar botón
+          submitBtn.innerHTML = originalBtnText
+          submitBtn.disabled = false
+
+          console.log("Status:", xhr.status)
+          console.log("Response:", xhr.responseText)
+
+          if (xhr.status === 200) {
+            // Éxito - guardar estado de sesión y redirigir
+            localStorage.setItem("userLoggedIn", "true")
+            window.location.href = "https://hotelituss1.vercel.app/?logged=true"
+          } else {
+            // Mostrar mensaje de error
+            errorMsg.classList.remove("d-none")
+            errorMsg.textContent = "Error al iniciar sesión. Por favor, verifica tus credenciales."
+          }
+        }
+      }
+
+      // Enviar datos en formato de formulario
+      xhr.send(`email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
+    })
   }
-});
+})
