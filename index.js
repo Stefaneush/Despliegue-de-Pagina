@@ -3,6 +3,7 @@ import {config} from 'dotenv';
 import pg from 'pg';
 import cors from 'cors';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 import path from "path"; // Para manejar rutas (NUEVO)
 import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
@@ -15,6 +16,7 @@ const __dirname = path.dirname(__filename);
 
 
 const app = express();
+const usuariosPendientes = {};
 
 //usar cors para validar datos a traves de las paginas
 app.use(cors());
