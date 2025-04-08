@@ -3,8 +3,6 @@ import {config} from 'dotenv';
 import pg from 'pg';
 import cors from 'cors';
 
-app.use(cors());
-
 import path from "path"; // Para manejar rutas (NUEVO)
 import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
 
@@ -16,6 +14,10 @@ const __dirname = path.dirname(__filename);
 
 
 const app = express();
+
+//usar cors para validar datos a traves de las paginas
+app.use(cors());
+
 
 // Servir archivos estáticos desde la carpeta 'public' (funcionamiento del css aparte del index.html)
 app.use(express.static("public"));
