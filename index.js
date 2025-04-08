@@ -71,15 +71,31 @@ app.post('/create', async (req, res) => {
 });
 
 //Verificar codigo
-router.post('/verify-code', (req, res) => {
-  const { correo, codigo } = req.body;
+app.post('/verify-code', async (req, res) => {
+    const { correo, codigo } = req.body;
 
-  if (verificationCodes[correo] === codigo) {
-    delete verificationCodes[correo]; // eliminar el código usado
-    return res.json({ success: true });
-  }
+    const usuarioPendiente = usuariosPendientes[correo];
 
-  res.json({ success: false, message: 'Código incorrecto' });
+    if (!usuarioPendiente) {
+        return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." });
+    }
+
+    if (usuarioPendiente.codigo !== codigo) {
+        return res.status(401).json({ success: false, message: "Código incorrecto." });
+    }
+
+    // Código correcto, insertamos en la DB
+    const { nombre, telefono, password } = usuarioPendiente;
+
+    await pool.query(
+        "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
+        [nombre, correo, telefono, password]
+    );
+
+    // Eliminamos de la lista temporal
+    delete usuariosPendientes[correo];
+
+    res.json({ success: true });
 });
 
 
