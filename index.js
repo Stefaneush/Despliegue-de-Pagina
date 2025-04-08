@@ -2,6 +2,7 @@ import express, { query } from 'express';
 import {config} from 'dotenv';
 import pg from 'pg';
 import cors from 'cors';
+import crypto from 'crypto';
 
 import path from "path"; // Para manejar rutas (NUEVO)
 import { fileURLToPath } from 'url'; // Necesario para manejar __dirname (NUEVO)
@@ -35,38 +36,39 @@ app.get('/', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-
+//Crear usuario
 app.post('/create', async (req, res) => {
     const { nombre, correo, telefono, password } = req.body;
- 
-     const result = await pool.query(
-         "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
-         [nombre, correo, telefono, password]
-     );
- 
-     const transporter = nodemailer.createTransport({
-         service: "gmail",
-         auth: {
-             user: "infohotelituss@gmail.com",
-             pass: "pgfn jkao huuk czog"
-         }
-     }); // ← cierre correcto
- 
-     const mailOptions = {
-         from: '"Hotelitus" <infohotelituss@gmail.com>',
-         to: correo,
-         subject: '¡Bienvenido a Hotelitus!',
-         html: `
-             <h2>Hola ${nombre} 👋</h2>
-             <p>Gracias por registrarte en <b>Hotelitus</b>. Estamos felices de tenerte aquí.</p>
-             <p>Tu usuario fue creado correctamente.</p>
-         `
-     };
- 
-     await transporter.sendMail(mailOptions);
- 
-     res.redirect('https://hotelituss1.vercel.app/');
- });
+
+    const codigo = crypto.randomInt(100000, 999999).toString(); // Código de 6 dígitos
+
+    usuariosPendientes[correo] = { codigo, nombre, telefono, password };
+
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: "infohotelituss@gmail.com",
+            pass: "pgfn jkao huuk czog"
+        }
+    });
+
+    const mailOptions = {
+        from: '"Hotelitus" <infohotelituss@gmail.com>',
+        to: correo,
+        subject: 'Código de verificación - Hotelitus',
+        html: `
+            <h2>Hola ${nombre} 👋</h2>
+            <p>Tu código de verificación es:</p>
+            <h3>${codigo}</h3>
+            <p>Ingresa este código en el sitio para completar tu registro.</p>
+        `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Respondemos al frontend para mostrar el modal
+    res.json({ success: true });
+});
 
 
 
