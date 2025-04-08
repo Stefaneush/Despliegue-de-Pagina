@@ -1,7 +1,7 @@
 import express, { query } from 'express';
 import {config} from 'dotenv';
 import pg from 'pg';
-const cors = require('cors');
+import cors from 'cors';
 
 app.use(cors());
 
