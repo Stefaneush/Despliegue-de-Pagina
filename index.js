@@ -21,9 +21,10 @@ const usuariosPendientes = {};
 //usar cors para validar datos a traves de las paginas
 app.use(
   cors({
-    origin: "*", // Permitir todas las solicitudes de origen cruzado
-    methods: ["GET", "POST"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Cabeceras permitidas
+    origin: ["https://hotelituss-test.vercel.app", "https://hotelituss1.vercel.app"], // Dominios permitidos
+    methods: ["GET", "POST", "OPTIONS"], // Incluir OPTIONS para las solicitudes preflight
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true // Permitir cookies en solicitudes cross-origin si es necesario
   }),
 )
 
