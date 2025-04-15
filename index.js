@@ -20,9 +20,10 @@ const usuariosPendientes = {}
 //usar cors para validar datos a traves de las paginas
 app.use(
   cors({
-    origin: "*", // Permitir todas las solicitudes de origen cruzado
-    methods: ["GET", "POST"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Cabeceras permitidas
+    origin: ["https://hotelituss-test.vercel.app", "https://hotelituss1.vercel.app"], // Dominios permitidos
+    methods: ["GET", "POST", "OPTIONS"], // Incluir OPTIONS para las solicitudes preflight
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true // Permitir cookies en solicitudes cross-origin si es necesario
   }),
 )
 
@@ -304,6 +305,7 @@ pool
 // Ruta para obtener datos del usuario
 app.post("/get-user-data", async (req, res) => {
   try {
+<<<<<<< HEAD
     const { correo } = req.body
 
     if (!correo) {
@@ -326,5 +328,30 @@ app.post("/get-user-data", async (req, res) => {
   }
 })
 
+=======
+    const { correo } = req.body;
+    
+    if (!correo) {
+      return res.status(400).json({ success: false, message: "Correo no proporcionado" });
+    }
+    
+    const result = await pool.query("SELECT id, nombre, correo, telefono FROM usuarios WHERE correo = $1", [correo]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+    }
+    
+    res.status(200).json({
+      success: true,
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Error al obtener datos del usuario:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
+  }
+});
+
+  
+>>>>>>> 3626cf00f4181fc4ce763fe4425c41efcd475b93
 app.listen(3000)
 console.log("server on port ", 3000)
