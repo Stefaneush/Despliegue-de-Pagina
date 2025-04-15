@@ -26,8 +26,10 @@
     <!-- Barra de navegación -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#" aria-label="Hotelituss">
-                <img src="https://th.bing.com/th/id/OIG2.BQbN5r6GvZewXhI4RZDT?w=1024&h=1024&rs=1&pid=ImgDetMain" alt="Hotelituss Logo" class="logo">
+            <a class="navbar-brand d-flex align-items-center" href="#" aria-label="Hotelituss">
+                <span class="brand-text d-flex align-items-center">
+                    <i class="fas fa-hotel me-2"></i>Hotelituss
+                </span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -65,9 +67,33 @@
                             <i class="fas fa-user-plus me-1"></i>Crear Usuario
                         </a>
                     </li>
-                    
-                    <!-- Botón visible SOLO cuando está logueado -->
-                   <button id="logoutBtn" class="btn btn-danger" style="display: none;">Cerrar sesión</button>
+                
+                
+<li class="nav-item dropdown" id="userProfileDropdown" style="display: none;">
+  <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="fas fa-user-circle me-1"></i>
+    <span id="userDisplayName">Usuario</span>
+  </a>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+    <li class="dropdown-header">
+      <div class="user-profile-header">
+        <div class="user-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="user-info">
+          <h6 id="userFullName">Nombre Completo</h6>
+          <p id="userEmail" class="text-muted small mb-0">correo@ejemplo.com</p>
+        </div>
+      </div>
+    </li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="#"><i class="fas fa-user-edit me-2"></i>Editar perfil</a></li>
+    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#myReservationsModal"><i class="fas fa-history me-2"></i>Mis reservas</a></li>
+    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Configuración</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="#" id="logoutLink"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
+  </ul>
+</li>
 
                 </ul>
             </div>
@@ -152,77 +178,78 @@
             <div class="section-divider mx-auto"></div>
             <p class="section-subtitle text-center mb-5" data-aos="fade-up">Descubra nuestras elegantes habitaciones diseñadas para su máximo confort</p>
 
-            <div class="row">
-                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
-                    <div class="room-card">
-                        <div class="room-tag">Popular</div>
-                        <a href="#" class="room-link">
-                            <img src="https://www.derbyhotels.com/files/img/img_s/bg-single-3-930.jpg" class="card-img-top" alt="Habitación Individual">
-                        </a>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Habitación Individual</h5>
-                                <span class="room-price">$120<small>/noche</small></span>
-                            </div>
-                            <div class="room-features mb-3">
-                                <span><i class="fas fa-ruler-combined"></i> 28m²</span>
-                                <span><i class="fas fa-user"></i> 1 Persona</span>
-                                <span><i class="fas fa-wifi"></i> WiFi</span>
-                            </div>
-                            <p class="card-text">Perfecta para viajeros solitarios que buscan comodidad y estilo en un espacio íntimo y acogedor.</p>
-                            <a href="#" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-info-circle me-2"></i>Ver detalles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
-                    <div class="room-card">
-                        <div class="room-tag bestseller">Más reservada</div>
-                        <a href="#" class="room-link">
-                            <img src="https://cdn.prod.website-files.com/5faeb38cb5f86ba2c2288cd3/6256f94b472b77aa5ec05264_executive%20double%20double%201.png" class="card-img-top" alt="Habitación Doble">
-                        </a>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Habitación Doble</h5>
-                                <span class="room-price">$180<small>/noche</small></span>
-                            </div>
-                            <div class="room-features mb-3">
-                                <span><i class="fas fa-ruler-combined"></i> 35m²</span>
-                                <span><i class="fas fa-user"></i> 2 Personas</span>
-                                <span><i class="fas fa-wifi"></i> WiFi</span>
-                            </div>
-                            <p class="card-text">Ideal para parejas o amigos que desean compartir experiencias en un espacio elegante y confortable.</p>
-                            <a href="#" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-info-circle me-2"></i>Ver detalles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
-                    <div class="room-card">
-                        <div class="room-tag luxury">Lujo</div>
-                        <a href="#" class="room-link">
-                            <img src="https://media.revistaad.es/photos/65c21a5605ba5d3cad2a23ba/16:9/w_2560%2Cc_limit/atr.royalmansion-bedroom2-mr.jpg" class="card-img-top" alt="Suite">
-                        </a>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Suite Ejecutiva</h5>
-                                <span class="room-price">$280<small>/noche</small></span>
-                            </div>
-                            <div class="room-features mb-3">
-                                <span><i class="fas fa-ruler-combined"></i> 55m²</span>
-                                <span><i class="fas fa-user"></i> 2-4 Personas</span>
-                                <span><i class="fas fa-wifi"></i> WiFi</span>
-                            </div>
-                            <p class="card-text">Lujo y comodidad en un espacio amplio y elegantemente decorado con vistas panorámicas a la ciudad.</p>
-                            <a href="#" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-info-circle me-2"></i>Ver detalles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Actualizar la sección de habitaciones para mostrar datos reales -->
+<div class="row">
+   <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+       <div class="room-card">
+           <div class="room-tag">Popular</div>
+           <a href="#" class="room-link">
+               <img src="https://www.derbyhotels.com/files/img/img_s/bg-single-3-930.jpg" class="card-img-top" alt="Habitación Individual">
+           </a>
+           <div class="card-body">
+               <div class="d-flex justify-content-between align-items-center mb-2">
+                   <h5 class="card-title mb-0">Habitación Individual</h5>
+                   <span class="room-price">$50<small>/noche</small></span>
+               </div>
+               <div class="room-features mb-3">
+                   <span><i class="fas fa-ruler-combined"></i> 28m²</span>
+                   <span><i class="fas fa-user"></i> 1 Persona</span>
+                   <span><i class="fas fa-wifi"></i> WiFi</span>
+               </div>
+               <p class="card-text">Perfecta para viajeros solitarios que buscan comodidad y estilo en un espacio íntimo y acogedor.</p>
+               <a href="#reservas" class="btn btn-outline-primary w-100">
+                   <i class="fas fa-calendar-check me-2"></i>Reservar ahora
+               </a>
+           </div>
+       </div>
+   </div>
+   <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+       <div class="room-card">
+           <div class="room-tag bestseller">Más reservada</div>
+           <a href="#" class="room-link">
+               <img src="https://cdn.prod.website-files.com/5faeb38cb5f86ba2c2288cd3/6256f94b472b77aa5ec05264_executive%20double%20double%201.png" class="card-img-top" alt="Habitación Doble">
+           </a>
+           <div class="card-body">
+               <div class="d-flex justify-content-between align-items-center mb-2">
+                   <h5 class="card-title mb-0">Habitación Doble</h5>
+                   <span class="room-price">$80<small>/noche</small></span>
+               </div>
+               <div class="room-features mb-3">
+                   <span><i class="fas fa-ruler-combined"></i> 35m²</span>
+                   <span><i class="fas fa-user"></i> 2 Personas</span>
+                   <span><i class="fas fa-wifi"></i> WiFi</span>
+               </div>
+               <p class="card-text">Ideal para parejas o amigos que desean compartir experiencias en un espacio elegante y confortable.</p>
+               <a href="#reservas" class="btn btn-outline-primary w-100">
+                   <i class="fas fa-calendar-check me-2"></i>Reservar ahora
+               </a>
+           </div>
+       </div>
+   </div>
+   <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+       <div class="room-card">
+           <div class="room-tag luxury">Lujo</div>
+           <a href="#" class="room-link">
+               <img src="https://media.revistaad.es/photos/65c21a5605ba5d3cad2a23ba/16:9/w_2560%2Cc_limit/atr.royalmansion-bedroom2-mr.jpg" class="card-img-top" alt="Suite">
+           </a>
+           <div class="card-body">
+               <div class="d-flex justify-content-between align-items-center mb-2">
+                   <h5 class="card-title mb-0">Suite Ejecutiva</h5>
+                   <span class="room-price">$150<small>/noche</small></span>
+               </div>
+               <div class="room-features mb-3">
+                   <span><i class="fas fa-ruler-combined"></i> 55m²</span>
+                   <span><i class="fas fa-user"></i> 4 Personas</span>
+                   <span><i class="fas fa-wifi"></i> WiFi</span>
+               </div>
+               <p class="card-text">Lujo y comodidad en un espacio amplio y elegantemente decorado con vistas panorámicas a la ciudad.</p>
+               <a href="#reservas" class="btn btn-outline-primary w-100">
+                   <i class="fas fa-calendar-check me-2"></i>Reservar ahora
+               </a>
+           </div>
+       </div>
+   </div>
+</div>
 
             <div class="text-center mt-4" data-aos="fade-up">
                 <a href="#" class="btn btn-primary">
@@ -409,7 +436,7 @@
 
             <div class="row justify-content-center">
                 <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
-                    <form id="reservationForm" class="reservation-form needs-validation" novalidate>
+                    <form class="reservation-form">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="checkIn" class="form-label">Fecha de entrada</label>
@@ -426,27 +453,28 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="roomType" class="form-label">Tipo de habitación</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-bed"></i></span>
-                                    <select class="form-select" id="roomType" required>
-                                        <option value="">Seleccionar...</option>
-                                        <option value="individual">Habitación Individual</option>
-                                        <option value="doble">Habitación Doble</option>
-                                        <option value="suite">Suite Ejecutiva</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="guests" class="form-label">Número de huéspedes</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
-                                    <input type="number" class="form-control" id="guests" min="1" max="4" required>
-                                </div>
-                            </div>
-                        </div>
+                        
+<!-- Actualizar el formulario de reservas para mostrar el número de habitaciones disponibles -->
+<div class="row">
+   <div class="col-md-6 mb-3">
+       <label for="roomType" class="form-label">Tipo de habitación</label>
+       <div class="input-group">
+           <span class="input-group-text"><i class="fas fa-bed"></i></span>
+           <select class="form-select" id="roomType" required>
+               <option value="">Seleccionar...</option>
+               <!-- Las opciones se cargarán dinámicamente desde la base de datos -->
+           </select>
+       </div>
+   </div>
+   <div class="col-md-6 mb-3">
+       <label for="guests" class="form-label">Número de huéspedes</label>
+       <div class="input-group">
+           <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
+           <input type="number" class="form-control" id="guests" min="1" max="4" required>
+       </div>
+       <small class="form-text text-muted">El número máximo de huéspedes depende del tipo de habitación</small>
+   </div>
+</div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="name" class="form-label">Nombre completo</label>
@@ -621,7 +649,7 @@
                             </div>
                             <div>
                                 <h4>Email</h4>
-                                <p><a href="/cdn-cgi/l/email-protection#e68f888089a68e8992838a8f92939595c885898b"><span class="__cf_email__" data-cfemail="640d0a020b240c0b1001080d101117174a070b09">[email&#160;protected]</span></a></p>
+                                <p><a href="/cdn-cgi/l/email-protection#bfd6d1d9d0ffd7d0cbdad3d6cbcacccc91dcd0d2"><span class="__cf_email__" data-cfemail="c4adaaa2ab84aca5b0a1a8adb0b1b7b7eaa7aba9">[email&#160;protected]</span></a></p>
                             </div>
                         </div>
                         <div class="location-item">
@@ -677,7 +705,7 @@
                                         <i class="fas fa-envelope"></i>
                                     </div>
                                     <h5>Email</h5>
-                                    <p><a href="/cdn-cgi/l/email-protection#1a7975746e7b796e755a72756e7f76736e6f696934797577"><span class="__cf_email__" data-cfemail="8deee2e3f9eceef9e2cde5e2f9e8e1e4f9f8fefea3eee2e0">[email&#160;protected]</span></a></p>
+                                    <p><a href="/cdn-cgi/l/email-protection#5d3e3233293c3e29321d35322938313429282e2e733e3230"><span class="__cf_email__" data-cfemail="82e1edecf6e3e1f6edc2eaedf6e7eeebf6f7f1f1ace1edef">[email&#160;protected]</span></a></p>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -740,8 +768,9 @@
             <div class="row">
                 <div class="col-lg-4 mb-4">
                     <div class="footer-brand mb-4">
-                        <img src="https://th.bing.com/th/id/OIG2.BQbN5r6GvZewXhI4RZDT?w=100&h=100&rs=1&pid=ImgDetMain" alt="Hotelituss Logo" class="footer-logo">
-                        <h5>Hotelituss</h5>
+                        <h5 class="d-flex align-items-center">
+                            <i class="fas fa-hotel me-2"></i>Hotelituss
+                        </h5>
                     </div>
                     <p>Experiencia de lujo y confort en el corazón de Mendoza. Nuestro compromiso es brindarle una estancia inolvidable.</p>
                     <div class="social-icons">
@@ -935,33 +964,33 @@
                       Credenciales incorrectas
                     </div>
                     <!-- Update the login form to prevent default submission and use our JavaScript handler -->
-                    
-                    <div class="mb-3">
-                        <label for="loginEmail" class="form-label">Email</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                            <input type="email" class="form-control" id="loginEmail" placeholder="Ingrese su email" required>
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="loginEmail" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" name="email" class="form-control" id="loginEmail" placeholder="Ingrese su email" required>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="loginPassword" class="form-label">Contraseña</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                            <input type="password" class="form-control" id="loginPassword" placeholder="Ingrese su contraseña" required>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" name="password" class="form-control" id="loginPassword" placeholder="Ingrese su contraseña" required>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="rememberMe">
-                            <label class="form-check-label" for="rememberMe">Recordarme</label>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">Recordarme</label>
+                            </div>
+                            <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
                         </div>
-                        <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
-                    </button>
-                
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </button>
+                    </form>
                     <div id="loginError" class="alert alert-danger mt-3 d-none" role="alert">
                         Credenciales incorrectas.
                     </div>
@@ -979,5 +1008,32 @@
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="script.js"></script>
+    <!-- Agregar SweetAlert2 para mejorar las alertas -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Agregar el modal de "Mis reservas" si no existe -->
+<div class="modal fade" id="myReservationsModal" tabindex="-1" aria-labelledby="myReservationsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="myReservationsModalLabel">
+          <i class="fas fa-calendar-check me-2"></i>Mis Reservas
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="userReservationsList">
+          <!-- Aquí se cargarán las reservas del usuario -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <a href="#reservas" class="btn btn-primary" data-bs-dismiss="modal">
+          <i class="fas fa-plus-circle me-2"></i>Nueva Reserva
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -149,65 +149,80 @@ app.post("/sesion", async (req, res) => {
   }
 })
 
-// Modificar la ruta de reservar para aceptar más campos
+// Agregar la nueva ruta para obtener los tipos de habitación
+app.get("/room-types", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, tipo, numero, precio_por_noche, disponible, capacidad 
+      FROM habitaciones 
+      WHERE disponible = true 
+      ORDER BY precio_por_noche ASC
+    `)
+
+    res.status(200).json({
+      success: true,
+      roomTypes: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener tipos de habitación:", error)
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener tipos de habitación",
+    })
+  }
+})
+
+// Modificar la ruta de reservar para verificar disponibilidad
 app.post("/reservar", async (req, res) => {
-  const {
-    nombre,
-    correo,
-    fecha_inicio,
-    fecha_fin,
-    habitacion_tipo,
-    huespedes,
-    solicitudes_especiales,
-    estado,
-    usuario_id,
-  } = req.body
+  const { nombre, correo, fecha_inicio, fecha_fin, habitacion_tipo, huespedes, solicitudes_especiales, estado } =
+    req.body
 
   try {
+    // Verificar disponibilidad de habitaciones del tipo seleccionado
+    const disponibilidadResult = await pool.query("SELECT * FROM habitaciones WHERE tipo = $1 AND disponible = true", [
+      habitacion_tipo,
+    ])
+
+    if (disponibilidadResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No hay habitaciones disponibles del tipo seleccionado",
+      })
+    }
+
+    // Verificar que el número de huéspedes no exceda la capacidad
+    const habitacionInfo = disponibilidadResult.rows[0]
+    if (Number.parseInt(huespedes) > habitacionInfo.capacidad) {
+      return res.status(400).json({
+        success: false,
+        message: `La capacidad máxima para este tipo de habitación es de ${habitacionInfo.capacidad} personas`,
+      })
+    }
+
     // Buscar o crear usuario
-    let user_id = usuario_id
+    const usuario = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+    let usuario_id
 
-    if (!user_id) {
-      const usuario = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
-
-      if (usuario.rows.length === 0) {
-        const insertUser = await pool.query(
-          "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-          [nombre, correo, "default123"], // contraseña por defecto, ideal cambiar luego
-        )
-        user_id = insertUser.rows[0].id
-      } else {
-        user_id = usuario.rows[0].id
-      }
+    if (usuario.rows.length === 0) {
+      const insertUser = await pool.query(
+        "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
+        [nombre, correo, "default123"], // contraseña por defecto, ideal cambiar luego
+      )
+      usuario_id = insertUser.rows[0].id
+    } else {
+      usuario_id = usuario.rows[0].id
     }
 
     // Obtener el ID de la habitación según el tipo
-    const habitacionResult = await pool.query("SELECT id FROM habitaciones WHERE tipo = $1 LIMIT 1", [habitacion_tipo])
-
-    let habitacion_id
-
-    if (habitacionResult.rows.length === 0) {
-      // Si no existe el tipo de habitación, creamos uno sin especificar el ID
-      // Dejamos que la base de datos asigne automáticamente el ID
-      const precio = habitacion_tipo === "suite" ? 280 : habitacion_tipo === "doble" ? 180 : 120
-      const capacidad = huespedes || (habitacion_tipo === "suite" ? 4 : habitacion_tipo === "doble" ? 2 : 1)
-
-      const insertHabitacion = await pool.query(
-        "INSERT INTO habitaciones (tipo, capacidad, precio) VALUES ($1, $2, $3) RETURNING id",
-        [habitacion_tipo, capacidad, precio],
-      )
-      habitacion_id = insertHabitacion.rows[0].id
-    } else {
-      habitacion_id = habitacionResult.rows[0].id
-    }
+    const habitacion_id = habitacionInfo.id
 
     // Insertar reserva
     const reservaResult = await pool.query(
       `INSERT INTO reservas (
-        usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado, 
-        huespedes, solicitudes_especiales, fecha_creacion
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id`,
-      [user_id, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente", huespedes, solicitudes_especiales],
+       usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado, 
+       huespedes, solicitudes_especiales, fecha_creacion
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id`,
+      [usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente", huespedes, solicitudes_especiales],
     )
 
     res.status(200).json({
@@ -224,7 +239,7 @@ app.post("/reservar", async (req, res) => {
   }
 })
 
-// Ruta para obtener las reservas de un usuario
+// Modificar la ruta para obtener las reservas del usuario para incluir el precio
 app.post("/user-reservations", async (req, res) => {
   try {
     const { correo } = req.body
@@ -242,16 +257,16 @@ app.post("/user-reservations", async (req, res) => {
 
     const userId = userResult.rows[0].id
 
-    // Obtenemos las reservas del usuario
+    // Obtenemos las reservas del usuario con información de la habitación
     const reservasResult = await pool.query(
       `
-      SELECT r.id, r.fecha_inicio, r.fecha_fin, r.estado, r.fecha_creacion, 
-             h.tipo as habitacion_tipo, r.huespedes, r.solicitudes_especiales
-      FROM reservas r
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      WHERE r.usuario_id = $1
-      ORDER BY r.fecha_creacion DESC
-    `,
+     SELECT r.id, r.fecha_inicio, r.fecha_fin, r.estado, r.fecha_creacion, 
+            h.tipo as habitacion_tipo, h.precio_por_noche, r.huespedes, r.solicitudes_especiales
+     FROM reservas r
+     JOIN habitaciones h ON r.habitacion_id = h.id
+     WHERE r.usuario_id = $1
+     ORDER BY r.fecha_creacion DESC
+   `,
       [userId],
     )
 
