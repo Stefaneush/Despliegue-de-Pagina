@@ -20,10 +20,9 @@ const usuariosPendientes = {}
 //usar cors para validar datos a traves de las paginas
 app.use(
   cors({
-    origin: ["https://hotelituss-test.vercel.app", "https://hotelituss1.vercel.app"], // Dominios permitidos
-    methods: ["GET", "POST", "OPTIONS"], // Incluir OPTIONS para las solicitudes preflight
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true // Permitir cookies en solicitudes cross-origin si es necesario
+    origin: "*", // Permitir todas las solicitudes de origen cruzado
+    methods: ["GET", "POST"], // Métodos permitidos
+    allowedHeaders: ["Content-Type", "Authorization"], // Cabeceras permitidas
   }),
 )
 
@@ -152,33 +151,50 @@ app.post("/sesion", async (req, res) => {
 
 // Modificar la ruta de reservar para aceptar más campos
 app.post("/reservar", async (req, res) => {
-  const { nombre, correo, fecha_inicio, fecha_fin, habitacion_tipo, huespedes, solicitudes_especiales, estado } =
-    req.body
+  const {
+    nombre,
+    correo,
+    fecha_inicio,
+    fecha_fin,
+    habitacion_tipo,
+    huespedes,
+    solicitudes_especiales,
+    estado,
+    usuario_id,
+  } = req.body
 
   try {
     // Buscar o crear usuario
-    const usuario = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
-    let usuario_id
+    let user_id = usuario_id
 
-    if (usuario.rows.length === 0) {
-      const insertUser = await pool.query(
-        "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-        [nombre, correo, "default123"], // contraseña por defecto, ideal cambiar luego
-      )
-      usuario_id = insertUser.rows[0].id
-    } else {
-      usuario_id = usuario.rows[0].id
+    if (!user_id) {
+      const usuario = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+
+      if (usuario.rows.length === 0) {
+        const insertUser = await pool.query(
+          "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
+          [nombre, correo, "default123"], // contraseña por defecto, ideal cambiar luego
+        )
+        user_id = insertUser.rows[0].id
+      } else {
+        user_id = usuario.rows[0].id
+      }
     }
 
     // Obtener el ID de la habitación según el tipo
-    const habitacionResult = await pool.query("SELECT id FROM habitaciones WHERE tipo = $1", [habitacion_tipo])
+    const habitacionResult = await pool.query("SELECT id FROM habitaciones WHERE tipo = $1 LIMIT 1", [habitacion_tipo])
 
     let habitacion_id
+
     if (habitacionResult.rows.length === 0) {
-      // Si no existe el tipo de habitación, creamos uno
+      // Si no existe el tipo de habitación, creamos uno sin especificar el ID
+      // Dejamos que la base de datos asigne automáticamente el ID
+      const precio = habitacion_tipo === "suite" ? 280 : habitacion_tipo === "doble" ? 180 : 120
+      const capacidad = huespedes || (habitacion_tipo === "suite" ? 4 : habitacion_tipo === "doble" ? 2 : 1)
+
       const insertHabitacion = await pool.query(
-        "INSERT INTO habitaciones (tipo, capacidad, precio_por_noche) VALUES ($1, $2, $3) RETURNING id",
-        [habitacion_tipo, huespedes || 2, habitacion_tipo === "suite" ? 280 : habitacion_tipo === "doble" ? 180 : 120],
+        "INSERT INTO habitaciones (tipo, capacidad, precio) VALUES ($1, $2, $3) RETURNING id",
+        [habitacion_tipo, capacidad, precio],
       )
       habitacion_id = insertHabitacion.rows[0].id
     } else {
@@ -191,7 +207,7 @@ app.post("/reservar", async (req, res) => {
         usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado, 
         huespedes, solicitudes_especiales, fecha_creacion
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id`,
-      [usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente", huespedes, solicitudes_especiales],
+      [user_id, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente", huespedes, solicitudes_especiales],
     )
 
     res.status(200).json({
