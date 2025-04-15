@@ -1,9 +1,7 @@
-import express, { query } from 'express';
-import {config} from 'dotenv';
-import pg from 'pg';
-import cors from 'cors';
-import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import express from "express"
+import { config } from "dotenv"
+import pg from "pg"
+import cors from "cors"
 
 import path from "path" // Para manejar rutas (NUEVO)
 import { fileURLToPath } from "url" // Necesario para manejar __dirname (NUEVO)
@@ -14,25 +12,19 @@ config()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-
-const app = express();
-const usuariosPendientes = {};
+const app = express()
 
 //usar cors para validar datos a traves de las paginas
-app.use(
-  cors({
-    origin: "*", // Permitir todas las solicitudes de origen cruzado
-    methods: ["GET", "POST"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Cabeceras permitidas
-  }),
-)
+app.use(cors())
 
-// Middleware para analizar JSON y datos de formulario
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// Update the /sesion endpoint to properly handle JSON requests
+app.use(express.json()) // Add this line near the top with other middleware
 
-// Servir archivos estáticos desde la carpeta 'public'
+// Servir archivos estáticos desde la carpeta 'public' (funcionamiento del css aparte del index.html)
 app.use(express.static("public"))
+
+// Middleware para analizar los datos de los formularios //NUEVO
+app.use(express.urlencoded({ extended: true }))
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -42,131 +34,89 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario
-app.post('/create', async (req, res) => {
-    const { nombre, correo, telefono, password } = req.body;
+app.post("/create", async (req, res) => {
+  const { nombre, correo, telefono, password } = req.body
+  const result = await pool.query(
+    "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4); ",
+    [nombre, correo, telefono, password],
+  )
+  res.redirect("https://hotelituss1.vercel.app/") //funcion para llevar de vuelta a la pagina de inicio
+  // res.send("El usuario ha sido creado exitosamente") funcion sin usar
+})
 
-    const codigo = crypto.randomInt(100000, 999999).toString(); // Código de 6 dígitos
-
-    usuariosPendientes[correo] = { codigo, nombre, telefono, password };
-
-    const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: "infohotelituss@gmail.com",
-            pass: "pgfn jkao huuk czog"
-        }
-    });
-
-    const mailOptions = {
-        from: '"Hotelitus" <infohotelituss@gmail.com>',
-        to: correo,
-        subject: 'Código de verificación - Hotelitus',
-        html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Tu código de verificación es:</p>
-            <h3>${codigo}</h3>
-            <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    // Respondemos al frontend para mostrar el modal
-    res.json({ success: true });
-});
-
-//Verificar codigo
-app.post('/verify-code', async (req, res) => {
-    const { correo, codigo } = req.body;
-
-    const usuarioPendiente = usuariosPendientes[correo];
-
-    if (!usuarioPendiente) {
-        return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." });
-    }
-
-    if (usuarioPendiente.codigo !== codigo) {
-        return res.status(401).json({ success: false, message: "Código incorrecto." });
-    }
-
-    // Código correcto, insertamos en la DB
-    const { nombre, telefono, password } = usuarioPendiente;
-
-    await pool.query(
-        "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
-        [nombre, correo, telefono, password]
-    );
-
-    // Eliminamos de la lista temporal
-    delete usuariosPendientes[correo];
-
-    res.json({ success: true });
-});
-
-
-
-//iniciar sesion
+// Actualizar el endpoint de sesión para manejar mejor las credenciales
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
-  console.log("Headers:", req.headers)
+
+  // Verificar que los datos necesarios estén presentes
+  if (!req.body.email || !req.body.password) {
+    return res.status(400).json({ message: "Faltan datos de inicio de sesión" })
+  }
+
+  const { email, password } = req.body
 
   try {
-    const { email, password } = req.body
+    // Consulta a la base de datos
+    const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1", [email])
 
-    if (!email || !password) {
-      console.log("Faltan credenciales")
-      return res.status(400).json({ message: "Faltan credenciales" })
-    }
+    console.log("Resultado de búsqueda:", result.rows)
 
-    console.log(`Buscando usuario con email: ${email}`)
-
-    const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
-
-    console.log("Resultado de búsqueda:", result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado")
-
+    // Verificar si se encontró un usuario y si la contraseña coincide
     if (result.rows.length === 0) {
+      console.log("Usuario no encontrado")
       return res.status(401).json({ message: "Credenciales incorrectas" })
     }
 
-    // Para solicitudes de formulario tradicionales
-    if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
-      return res.redirect("https://hotelituss1.vercel.app/?logged=true")
+    const user = result.rows[0]
+
+    // Verificar la contraseña
+    if (user.contrasena !== password) {
+      console.log("Contraseña incorrecta")
+      return res.status(401).json({ message: "Credenciales incorrectas" })
     }
 
-    // Para solicitudes JSON
-    return res.status(200).json({
-      success: true,
-      message: "Login exitoso",
-      user: {
-        id: result.rows[0].id,
-        nombre: result.rows[0].nombre,
-        correo: result.rows[0].correo,
-      },
-    })
+    // Login exitoso
+    console.log("Login exitoso para:", email)
+
+    // Para API requests, return JSON
+    if (req.headers["content-type"] === "application/json") {
+      return res.status(200).json({
+        success: true,
+        message: "Login exitoso",
+        user: {
+          id: user.id,
+          nombre: user.nombre,
+          correo: user.correo,
+        },
+      })
+    }
+
+    // Para form submissions, redirect
+    return res.redirect("https://hotelituss1.vercel.app/?logged=true")
   } catch (error) {
     console.error("Error en login:", error)
     res.status(500).json({ message: "Error del servidor" })
   }
 })
 
+// Asegurarnos de que la ruta de reserva esté correctamente implementada
 app.post("/reservar", async (req, res) => {
   const { nombre, correo, fecha_inicio, fecha_fin, habitacion_tipo, estado } = req.body
 
   try {
-    // Buscar o crear usuario
+    // Verificar si el usuario está autenticado
+    if (!correo) {
+      return res.status(401).json({ success: false, message: "Usuario no autenticado" })
+    }
+
+    // Buscar usuario
     const usuario = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
-    let usuario_id
 
     if (usuario.rows.length === 0) {
-      const insertUser = await pool.query(
-        "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-        [nombre, correo, "default123"], // contraseña por defecto, ideal cambiar luego
-      )
-      usuario_id = insertUser.rows[0].id
-    } else {
-      usuario_id = usuario.rows[0].id
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" })
     }
+
+    const usuario_id = usuario.rows[0].id
 
     // Insertar reserva
     await pool.query(
@@ -174,12 +124,10 @@ app.post("/reservar", async (req, res) => {
       [usuario_id, habitacion_tipo, fecha_inicio, fecha_fin, estado || "pendiente"],
     )
 
-    res.send(
-      '<script>alert("¡Reserva realizada con éxito!"); window.location.href = "https://hotelituss1.vercel.app/";</script>',
-    )
+    return res.status(200).json({ success: true, message: "Reserva realizada con éxito" })
   } catch (err) {
-    console.error(err)
-    res.status(500).send("Error al realizar la reserva")
+    console.error("Error al realizar la reserva:", err)
+    return res.status(500).json({ success: false, message: "Error al realizar la reserva" })
   }
 })
 
@@ -204,17 +152,10 @@ app.get("/delete", async (req, res) => {
   res.send("se elimino el usuario")
 })
 
-// Ruta para verificar el estado del servidor
-app.get("/status", (req, res) => {
-  res.status(200).json({ status: "ok", message: "Servidor funcionando correctamente" })
-})
-
 pool
   .connect()
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
-
-  
 app.listen(3000)
 console.log("server on port ", 3000)

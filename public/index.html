@@ -409,7 +409,7 @@
 
             <div class="row justify-content-center">
                 <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
-                    <form class="reservation-form">
+                    <form id="reservationForm" class="reservation-form needs-validation" novalidate>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="checkIn" class="form-label">Fecha de entrada</label>
@@ -621,7 +621,7 @@
                             </div>
                             <div>
                                 <h4>Email</h4>
-                                <p><a href="/cdn-cgi/l/email-protection#bfd6d1d9d0ffd7d0cbdad3d6cbcacccc91dcd0d2"><span class="__cf_email__" data-cfemail="c4adaaa2ab84aca5b0a1a8adb0b1b7b7eaa7aba9">[email&#160;protected]</span></a></p>
+                                <p><a href="/cdn-cgi/l/email-protection#e68f888089a68e8992838a8f92939595c885898b"><span class="__cf_email__" data-cfemail="640d0a020b240c0b1001080d101117174a070b09">[email&#160;protected]</span></a></p>
                             </div>
                         </div>
                         <div class="location-item">
@@ -677,7 +677,7 @@
                                         <i class="fas fa-envelope"></i>
                                     </div>
                                     <h5>Email</h5>
-                                    <p><a href="/cdn-cgi/l/email-protection#5d3e3233293c3e29321d35322938313429282e2e733e3230"><span class="__cf_email__" data-cfemail="82e1edecf6e3e1f6edc2eaedf6e7eeebf6f7f1f1ace1edef">[email&#160;protected]</span></a></p>
+                                    <p><a href="/cdn-cgi/l/email-protection#1a7975746e7b796e755a72756e7f76736e6f696934797577"><span class="__cf_email__" data-cfemail="8deee2e3f9eceef9e2cde5e2f9e8e1e4f9f8fefea3eee2e0">[email&#160;protected]</span></a></p>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -935,33 +935,33 @@
                       Credenciales incorrectas
                     </div>
                     <!-- Update the login form to prevent default submission and use our JavaScript handler -->
-                    <form id="loginForm">
-                        <div class="mb-3">
-                            <label for="loginEmail" class="form-label">Email</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input type="email" name="email" class="form-control" id="loginEmail" placeholder="Ingrese su email" required>
-                            </div>
+                    
+                    <div class="mb-3">
+                        <label for="loginEmail" class="form-label">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="loginEmail" placeholder="Ingrese su email" required>
                         </div>
-                        <div class="mb-3">
-                            <label for="loginPassword" class="form-label">Contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input type="password" name="password" class="form-control" id="loginPassword" placeholder="Ingrese su contraseña" required>
-                            </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loginPassword" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="loginPassword" placeholder="Ingrese su contraseña" required>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="rememberMe">
-                                <label class="form-check-label" for="rememberMe">Recordarme</label>
-                            </div>
-                            <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="rememberMe">
+                            <label class="form-check-label" for="rememberMe">Recordarme</label>
                         </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
-                        </button>
-                    </form>
+                        <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                    </button>
+                
                     <div id="loginError" class="alert alert-danger mt-3 d-none" role="alert">
                         Credenciales incorrectas.
                     </div>

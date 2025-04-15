@@ -290,6 +290,51 @@ function setupFormValidation() {
       }
     })
   }
+
+  // Validación específica para el formulario de reserva
+  const reservationForm = document.querySelector(".reservation-form")
+  if (reservationForm) {
+    reservationForm.addEventListener("submit", function (event) {
+      event.preventDefault()
+
+      // Verificar si el usuario está logueado
+      if (localStorage.getItem("userLoggedIn") !== "true") {
+        // Si no está logueado, mostrar modal de login
+        if (typeof bootstrap !== "undefined") {
+          const loginModal = new bootstrap.Modal(document.getElementById("loginModal"))
+          loginModal.show()
+
+          // Mostrar mensaje informativo
+          const loginErrorMsg = document.getElementById("loginErrorMsg")
+          if (loginErrorMsg) {
+            loginErrorMsg.textContent = "Debe iniciar sesión para realizar una reserva"
+            loginErrorMsg.classList.remove("d-none")
+          }
+        } else {
+          alert("Debe iniciar sesión para realizar una reserva")
+        }
+        return
+      }
+
+      // Si está logueado, procesar el formulario
+      if (this.checkValidity()) {
+        // Recopilar datos del formulario
+        const reservationData = {
+          fecha_inicio: document.getElementById("checkIn").value,
+          fecha_fin: document.getElementById("checkOut").value,
+          habitacion_tipo: document.getElementById("roomType").value,
+          nombre: document.getElementById("name").value,
+          correo: localStorage.getItem("currentUserEmail") || localStorage.getItem("usuarioLogueado"),
+          estado: "pendiente",
+        }
+
+        // Enviar datos al backend
+        submitReservation(reservationData)
+      }
+
+      this.classList.add("was-validated")
+    })
+  }
 }
 
 /**
@@ -592,55 +637,99 @@ function deleteReserva(id) {
     })
 }
 
-// Implementación mejorada del inicio de sesión con manejo de errores
-document.addEventListener("DOMContentLoaded", () => {
-  const loginForm = document.getElementById("loginForm")
+// Función para enviar una reserva al backend
+function submitReservation(data) {
+  // Mostrar indicador de carga
+  const submitBtn = document.querySelector(".reservation-form button[type='submit']")
+  const originalBtnText = submitBtn.innerHTML
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...'
+  submitBtn.disabled = true
 
-  if (loginForm) {
-    loginForm.addEventListener("submit", function (e) {
-      e.preventDefault()
-
-      // Mostrar indicador de carga
-      const submitBtn = this.querySelector('button[type="submit"]')
-      const originalBtnText = submitBtn.innerHTML
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...'
-      submitBtn.disabled = true
-
-      // Ocultar mensajes de error previos
-      const errorMsg = document.getElementById("loginErrorMsg")
-      errorMsg.classList.add("d-none")
-
-      // Obtener datos del formulario
-      const email = document.getElementById("loginEmail").value
-      const password = document.getElementById("loginPassword").value
-
-      // Usar XMLHttpRequest en lugar de fetch para mejor compatibilidad
-      const xhr = new XMLHttpRequest()
-      xhr.open("POST", "https://hotelitus.onrender.com/sesion", true)
-      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          // Restaurar botón
-          submitBtn.innerHTML = originalBtnText
-          submitBtn.disabled = false
-
-          console.log("Status:", xhr.status)
-          console.log("Response:", xhr.responseText)
-
-          if (xhr.status === 200) {
-            // Éxito - guardar estado de sesión y redirigir
-            localStorage.setItem("userLoggedIn", "true")
-            window.location.href = "https://hotelituss1.vercel.app/?logged=true"
-          } else {
-            // Mostrar mensaje de error
-            errorMsg.classList.remove("d-none")
-            errorMsg.textContent = "Error al iniciar sesión. Por favor, verifica tus credenciales."
-          }
-        }
+  fetch(`${backendBaseUrl}/reservar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+    credentials: "include", // Incluir cookies en la solicitud
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
       }
-
-      // Enviar datos en formato de formulario
-      xhr.send(`email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
+      return response.text()
     })
+    .then((result) => {
+      console.log("✅ Reserva creada:", result)
+
+      // Mostrar mensaje de éxito
+      alert("¡Reserva creada con éxito!")
+
+      // Limpiar formulario
+      document.querySelector(".reservation-form").reset()
+
+      // Restaurar botón
+      submitBtn.innerHTML = originalBtnText
+      submitBtn.disabled = false
+    })
+    .catch((error) => {
+      console.error("❌ Error al crear la reserva:", error)
+
+      // Mostrar mensaje de error
+      alert("Error al crear la reserva. Por favor, inténtelo de nuevo.")
+
+      // Restaurar botón
+      submitBtn.innerHTML = originalBtnText
+      submitBtn.disabled = false
+    })
+}
+
+// Reemplazar la función de manejo del formulario de login con esta versión mejorada
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault() // Prevent default form submission
+
+  const email = document.getElementById("loginEmail").value
+  const password = document.getElementById("loginPassword").value
+  const errorContainer = document.getElementById("loginErrorMsg") // Use the existing error message container
+
+  // Mostrar información en la consola para depuración
+  console.log("Intentando iniciar sesión con:", { email })
+
+  try {
+    // Asegurarse de que los datos se envían en el formato correcto
+    const response = await fetch("https://hotelitus.onrender.com/sesion", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email,
+        password: password,
+      }),
+      credentials: "include", // Incluir cookies en la solicitud
+    })
+
+    console.log("Respuesta del servidor:", response.status)
+
+    const data = await response.json().catch(() => ({}))
+    console.log("Datos de respuesta:", data)
+
+    if (response.ok) {
+      // Success - store login state and redirect
+      localStorage.setItem("userLoggedIn", "true")
+      window.location.href = "https://hotelituss1.vercel.app/?logged=true"
+    } else if (response.status === 401) {
+      // Show error message for unauthorized
+      errorContainer.textContent = data.message || "Credenciales incorrectas"
+      errorContainer.classList.remove("d-none")
+    } else {
+      console.error("Error inesperado al iniciar sesión:", response.status)
+      errorContainer.textContent = data.message || "Error al conectar con el servidor"
+      errorContainer.classList.remove("d-none")
+    }
+  } catch (err) {
+    console.error("Error al enviar datos de inicio:", err)
+    errorContainer.textContent = "Error de conexión"
+    errorContainer.classList.remove("d-none")
   }
 })
