@@ -209,6 +209,236 @@ app.get("/status", (req, res) => {
   res.status(200).json({ status: "ok", message: "Servidor funcionando correctamente" })
 })
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Añadir estos endpoints al archivo backend.txt
+
+// Endpoint para crear una reserva
+app.post("/crear-reserva", async (req, res) => {
+  try {
+    const { 
+      fecha_inicio, 
+      fecha_fin, 
+      habitacion_tipo, 
+      huespedes, 
+      solicitudes_especiales, 
+      correo, 
+      estado 
+    } = req.body;
+    
+    // Validar datos
+    if (!fecha_inicio || !fecha_fin || !habitacion_tipo || !correo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Faltan datos obligatorios para la reserva" 
+      });
+    }
+    
+    // Obtener el ID del usuario
+    const userResult = await pool.query(
+      "SELECT id FROM usuarios WHERE correo = $1",
+      [correo]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Usuario no encontrado" 
+      });
+    }
+    
+    const usuario_id = userResult.rows[0].id;
+    
+    // Insertar la reserva
+    const result = await pool.query(
+      `INSERT INTO reservas 
+       (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado, huespedes, solicitudes_especiales) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING id`,
+      [
+        usuario_id, 
+        habitacion_tipo, 
+        fecha_inicio, 
+        fecha_fin, 
+        estado || "confirmada", 
+        huespedes || 1, 
+        solicitudes_especiales || ""
+      ]
+    );
+    
+    res.status(201).json({ 
+      success: true, 
+      message: "Reserva creada con éxito", 
+      reserva_id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error("Error al crear reserva:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error del servidor al crear la reserva" 
+    });
+  }
+});
+
+// Endpoint para obtener las reservas de un usuario
+app.post("/mis-reservas", async (req, res) => {
+  try {
+    const { correo } = req.body;
+    
+    if (!correo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Correo no proporcionado" 
+      });
+    }
+    
+    // Obtener el ID del usuario
+    const userResult = await pool.query(
+      "SELECT id FROM usuarios WHERE correo = $1",
+      [correo]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Usuario no encontrado" 
+      });
+    }
+    
+    const usuario_id = userResult.rows[0].id;
+    
+    // Obtener las reservas del usuario
+    const reservasResult = await pool.query(
+      `SELECT r.id, r.habitacion_id, r.fecha_inicio, r.fecha_fin, 
+              r.estado, r.huespedes, r.solicitudes_especiales, 
+              r.created_at
+       FROM reservas r
+       WHERE r.usuario_id = $1
+       ORDER BY r.fecha_inicio DESC`,
+      [usuario_id]
+    );
+    
+    res.status(200).json({ 
+      success: true, 
+      reservas: reservasResult.rows 
+    });
+  } catch (error) {
+    console.error("Error al obtener reservas:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error del servidor al obtener las reservas" 
+    });
+  }
+});
+
+// Endpoint para cancelar una reserva
+app.post("/cancelar-reserva", async (req, res) => {
+  try {
+    const { id } = req.body;
+    
+    if (!id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "ID de reserva no proporcionado" 
+      });
+    }
+    
+    // Actualizar el estado de la reserva a "cancelada"
+    const result = await pool.query(
+      "UPDATE reservas SET estado = 'cancelada' WHERE id = $1 RETURNING id",
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Reserva no encontrada" 
+      });
+    }
+    
+    res.status(200).json({ 
+      success: true, 
+      message: "Reserva cancelada con éxito" 
+    });
+  } catch (error) {
+    console.error("Error al cancelar reserva:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error del servidor al cancelar la reserva" 
+    });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pool
   .connect()
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
