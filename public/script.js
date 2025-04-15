@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Nuevas funciones
   setupReservationForm()
   setupMyReservations()
+  setupPaymentProcess()
 
   // Modificar el enlace "Mis reservas" en el menú desplegable
   const misReservasLink = document.querySelector('.dropdown-item[href="#"][contains(text(), "Mis reservas")]')
@@ -317,13 +318,16 @@ function setupFormValidation() {
   }
 }
 
-// Modify the setupReservationForm function to load room types from the database
+// Configurar el formulario de reservas
 function setupReservationForm() {
   const reservationForm = document.querySelector(".reservation-form")
 
   if (reservationForm) {
-    // Load room types from the database
+    // Cargar tipos de habitaciones disponibles
     loadRoomTypes()
+
+    // Configurar validación de fechas
+    setupDateValidation()
 
     reservationForm.addEventListener("submit", (e) => {
       e.preventDefault()
@@ -388,47 +392,67 @@ function setupReservationForm() {
   }
 }
 
-// Función para cargar los tipos de habitación desde la base de datos
+// Función para cargar tipos de habitaciones disponibles
 function loadRoomTypes() {
   const roomTypeSelect = document.getElementById("roomType")
-
   if (!roomTypeSelect) return
 
   // Mostrar indicador de carga
   roomTypeSelect.innerHTML = '<option value="">Cargando...</option>'
 
-  fetch(`${backendBaseUrl}/room-types`)
+  // Obtener fechas seleccionadas si existen
+  const checkIn = document.getElementById("checkIn").value
+  const checkOut = document.getElementById("checkOut").value
+  const guests = document.getElementById("guests").value
+
+  // Construir URL con parámetros de consulta
+  let url = `${backendBaseUrl}/habitaciones-disponibles`
+  const params = []
+
+  if (checkIn && checkOut) {
+    params.push(`fecha_inicio=${checkIn}`)
+    params.push(`fecha_fin=${checkOut}`)
+  }
+
+  if (guests) {
+    params.push(`capacidad=${guests}`)
+  }
+
+  if (params.length > 0) {
+    url += `?${params.join("&")}`
+  }
+
+  // Realizar petición al servidor
+  fetch(url)
     .then((response) => {
       if (!response.ok) {
-        throw new Error("Error al cargar tipos de habitación")
+        throw new Error("Error al obtener habitaciones")
       }
       return response.json()
     })
     .then((data) => {
-      if (data.success && data.roomTypes.length > 0) {
-        // Limpiar el select
-        roomTypeSelect.innerHTML = '<option value="">Seleccionar...</option>'
+      if (data.success && data.habitaciones.length > 0) {
+        // Agrupar habitaciones por tipo
+        const tiposHabitacion = {}
 
-        // Agregar las opciones de habitaciones
-        data.roomTypes.forEach((room) => {
-          const option = document.createElement("option")
-          option.value = room.tipo
-          option.textContent = `${getTipoHabitacion(room.tipo)} - $${room.precio_por_noche}/noche (Max: ${room.capacidad} personas)`
-          option.setAttribute("data-capacity", room.capacidad)
-          option.setAttribute("data-price", room.precio_por_noche)
-          roomTypeSelect.appendChild(option)
+        data.habitaciones.forEach((hab) => {
+          if (!tiposHabitacion[hab.tipo]) {
+            tiposHabitacion[hab.tipo] = {
+              tipo: hab.tipo,
+              precio: hab.precio_por_noche,
+              capacidad: hab.capacidad,
+            }
+          }
         })
 
-        // Configurar el evento de cambio para actualizar el número máximo de huéspedes
-        roomTypeSelect.addEventListener("change", function () {
-          const selectedOption = this.options[this.selectedIndex]
-          const maxCapacity = selectedOption.getAttribute("data-capacity")
-          const guestsInput = document.getElementById("guests")
+        // Generar opciones para el select
+        roomTypeSelect.innerHTML = '<option value="">Seleccionar...</option>'
 
-          if (guestsInput && maxCapacity) {
-            guestsInput.max = maxCapacity
-            guestsInput.value = Math.min(guestsInput.value || 1, maxCapacity)
-          }
+        Object.values(tiposHabitacion).forEach((tipo) => {
+          const option = document.createElement("option")
+          option.value = tipo.tipo
+          option.textContent = `${getTipoHabitacion(tipo.tipo)} - $${tipo.precio}/noche - Hasta ${tipo.capacidad} personas`
+          roomTypeSelect.appendChild(option)
         })
       } else {
         roomTypeSelect.innerHTML = '<option value="">No hay habitaciones disponibles</option>'
@@ -440,7 +464,54 @@ function loadRoomTypes() {
     })
 }
 
-// Modificar la función createReservation para manejar mejor los errores y mostrar mensajes más informativos
+// Configurar validación de fechas
+function setupDateValidation() {
+  const checkInInput = document.getElementById("checkIn")
+  const checkOutInput = document.getElementById("checkOut")
+
+  if (checkInInput && checkOutInput) {
+    // Establecer fecha mínima como hoy
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, "0")
+    const dd = String(today.getDate()).padStart(2, "0")
+    const todayStr = `${yyyy}-${mm}-${dd}`
+
+    checkInInput.setAttribute("min", todayStr)
+
+    // Actualizar fecha mínima de checkout cuando cambia checkin
+    checkInInput.addEventListener("change", function () {
+      if (this.value) {
+        checkOutInput.setAttribute("min", this.value)
+
+        // Si la fecha de salida es anterior a la de entrada, actualizarla
+        if (checkOutInput.value && checkOutInput.value < this.value) {
+          checkOutInput.value = this.value
+        }
+
+        // Recargar tipos de habitación disponibles
+        loadRoomTypes()
+      }
+    })
+
+    // Recargar tipos de habitación cuando cambia checkout
+    checkOutInput.addEventListener("change", function () {
+      if (this.value) {
+        loadRoomTypes()
+      }
+    })
+
+    // Recargar tipos de habitación cuando cambia número de huéspedes
+    const guestsInput = document.getElementById("guests")
+    if (guestsInput) {
+      guestsInput.addEventListener("change", () => {
+        loadRoomTypes()
+      })
+    }
+  }
+}
+
+// Función para crear una reserva
 function createReservation(data) {
   // Mostrar indicador de carga
   const submitBtn = document.querySelector('.reservation-form button[type="submit"]')
@@ -457,9 +528,7 @@ function createReservation(data) {
   })
     .then((response) => {
       if (!response.ok) {
-        return response.json().then((errorData) => {
-          throw new Error(errorData.message || "Error al crear la reserva")
-        })
+        throw new Error("Error al crear la reserva")
       }
       return response.json()
     })
@@ -468,35 +537,11 @@ function createReservation(data) {
       submitBtn.innerHTML = originalBtnText
       submitBtn.disabled = false
 
-      // Mostrar mensaje de éxito
-      if (typeof Swal !== "undefined") {
-        Swal.fire({
-          icon: "success",
-          title: "¡Reserva creada con éxito!",
-          text: 'Puede ver los detalles en la sección "Mis reservas"',
-          confirmButtonColor: "#c8a97e",
-        })
+      if (result.success) {
+        // Mostrar modal de confirmación con opción de pago
+        showReservationConfirmation(result.reservaId, result.montoTotal)
       } else {
-        alert('¡Reserva creada con éxito! Puede ver los detalles en la sección "Mis reservas"')
-      }
-
-      // Limpiar formulario
-      document.querySelector(".reservation-form").reset()
-
-      // Pre-llenar con datos del usuario nuevamente
-      const userDataStr = localStorage.getItem("currentUserData")
-      if (userDataStr) {
-        try {
-          const userData = JSON.parse(userDataStr)
-          if (document.getElementById("name")) {
-            document.getElementById("name").value = userData.nombre || ""
-          }
-          if (document.getElementById("email")) {
-            document.getElementById("email").value = userData.correo || ""
-          }
-        } catch (e) {
-          console.error("Error al parsear datos de usuario:", e)
-        }
+        alert(result.message || "Error al crear la reserva")
       }
     })
     .catch((error) => {
@@ -507,16 +552,243 @@ function createReservation(data) {
       submitBtn.disabled = false
 
       // Mostrar mensaje de error
-      if (typeof Swal !== "undefined") {
-        Swal.fire({
-          icon: "error",
-          title: "Error al crear la reserva",
-          text: error.message || "Por favor, inténtelo de nuevo.",
-          confirmButtonColor: "#c8a97e",
-        })
-      } else {
-        alert("Error al crear la reserva. Por favor, inténtelo de nuevo.")
+      alert("Error al crear la reserva. Por favor, inténtelo de nuevo.")
+    })
+}
+
+// Mostrar confirmación de reserva con opción de pago
+function showReservationConfirmation(reservaId, montoTotal) {
+  // Crear modal de confirmación dinámicamente si no existe
+  let confirmationModal = document.getElementById("reservationConfirmationModal")
+
+  if (!confirmationModal) {
+    const modalHTML = `
+      <div class="modal fade" id="reservationConfirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">¡Reserva creada con éxito!</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="text-center mb-4">
+                <div class="service-icon mb-3">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <h4>Reserva #<span id="confirmationReservaId"></span></h4>
+                <p>Su reserva ha sido creada correctamente. Para confirmarla, realice el pago correspondiente.</p>
+                <div class="alert alert-info">
+                  <strong>Monto total:</strong> $<span id="confirmationMontoTotal"></span>
+                </div>
+              </div>
+              <div class="payment-options">
+                <h5 class="mb-3">Opciones de pago:</h5>
+                <div class="d-grid gap-2">
+                  <button class="btn btn-primary payment-btn" data-payment="now">
+                    <i class="fas fa-credit-card me-2"></i>Pagar ahora
+                  </button>
+                  <button class="btn btn-outline-secondary payment-btn" data-payment="later" data-bs-dismiss="modal">
+                    <i class="fas fa-clock me-2"></i>Pagar después
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Añadir el modal al DOM
+    document.body.insertAdjacentHTML("beforeend", modalHTML)
+    confirmationModal = document.getElementById("reservationConfirmationModal")
+
+    // Configurar eventos de los botones de pago
+    confirmationModal.querySelectorAll(".payment-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const paymentType = this.getAttribute("data-payment")
+        const reservaId = document.getElementById("confirmationReservaId").textContent
+
+        if (paymentType === "now") {
+          // Mostrar formulario de pago
+          showPaymentForm(reservaId, document.getElementById("confirmationMontoTotal").textContent)
+
+          // Cerrar modal actual
+          const modal = bootstrap.Modal.getInstance(confirmationModal)
+          if (modal) modal.hide()
+        }
+      })
+    })
+  }
+
+  // Actualizar datos en el modal
+  document.getElementById("confirmationReservaId").textContent = reservaId
+  document.getElementById("confirmationMontoTotal").textContent = montoTotal
+
+  // Mostrar el modal
+  const modal = new bootstrap.Modal(confirmationModal)
+  modal.show()
+
+  // Limpiar formulario de reserva
+  document.querySelector(".reservation-form").reset()
+
+  // Pre-llenar con datos del usuario nuevamente
+  const userDataStr = localStorage.getItem("currentUserData")
+  if (userDataStr) {
+    try {
+      const userData = JSON.parse(userDataStr)
+      if (document.getElementById("name")) {
+        document.getElementById("name").value = userData.nombre || ""
       }
+      if (document.getElementById("email")) {
+        document.getElementById("email").value = userData.correo || ""
+      }
+    } catch (e) {
+      console.error("Error al parsear datos de usuario:", e)
+    }
+  }
+}
+
+// Configurar proceso de pago
+function setupPaymentProcess() {
+  // Este evento se delegará a elementos creados dinámicamente
+  document.addEventListener("click", (e) => {
+    if (e.target && e.target.classList.contains("process-payment-btn")) {
+      e.preventDefault()
+
+      const reservaId = e.target.getAttribute("data-reserva-id")
+      const monto = e.target.getAttribute("data-monto")
+
+      if (reservaId && monto) {
+        processPayment(reservaId, monto)
+      }
+    }
+  })
+}
+
+// Mostrar formulario de pago
+function showPaymentForm(reservaId, monto) {
+  // Crear modal de pago dinámicamente si no existe
+  let paymentModal = document.getElementById("paymentFormModal")
+
+  if (!paymentModal) {
+    const modalHTML = `
+      <div class="modal fade" id="paymentFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Realizar pago</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="paymentForm">
+                <div class="mb-3">
+                  <label for="cardNumber" class="form-label">Número de tarjeta</label>
+                  <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456" required>
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label for="expiryDate" class="form-label">Fecha de expiración</label>
+                    <input type="text" class="form-control" id="expiryDate" placeholder="MM/AA" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="cvv" class="form-label">CVV</label>
+                    <input type="text" class="form-control" id="cvv" placeholder="123" required>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="cardholderName" class="form-label">Nombre del titular</label>
+                  <input type="text" class="form-control" id="cardholderName" required>
+                </div>
+                <div class="alert alert-info">
+                  <strong>Monto a pagar:</strong> $<span id="paymentAmount"></span>
+                </div>
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-primary process-payment-btn">
+                    <i class="fas fa-lock me-2"></i>Procesar pago
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Añadir el modal al DOM
+    document.body.insertAdjacentHTML("beforeend", modalHTML)
+    paymentModal = document.getElementById("paymentFormModal")
+
+    // Configurar evento del formulario de pago
+    const paymentForm = document.getElementById("paymentForm")
+    paymentForm.addEventListener("submit", function (e) {
+      e.preventDefault()
+
+      const submitBtn = this.querySelector('button[type="submit"]')
+      const reservaId = submitBtn.getAttribute("data-reserva-id")
+      const monto = submitBtn.getAttribute("data-monto")
+
+      processPayment(reservaId, monto)
+    })
+  }
+
+  // Actualizar datos en el modal
+  document.getElementById("paymentAmount").textContent = monto
+  const submitBtn = paymentModal.querySelector(".process-payment-btn")
+  submitBtn.setAttribute("data-reserva-id", reservaId)
+  submitBtn.setAttribute("data-monto", monto)
+
+  // Mostrar el modal
+  const modal = new bootstrap.Modal(paymentModal)
+  modal.show()
+}
+
+// Procesar pago
+function processPayment(reservaId, monto) {
+  // Mostrar indicador de carga
+  const submitBtn = document.querySelector(".process-payment-btn")
+  const originalBtnText = submitBtn.innerHTML
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...'
+  submitBtn.disabled = true
+
+  // Enviar datos al servidor
+  fetch(`${backendBaseUrl}/registrar-pago`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      reserva_id: reservaId,
+      monto: monto,
+    }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Error al procesar el pago")
+      }
+      return response.json()
+    })
+    .then((result) => {
+      // Cerrar modal de pago
+      const paymentModal = bootstrap.Modal.getInstance(document.getElementById("paymentFormModal"))
+      if (paymentModal) paymentModal.hide()
+
+      // Mostrar mensaje de éxito
+      alert("¡Pago procesado con éxito! Su reserva ha sido confirmada.")
+
+      // Recargar las reservas del usuario si el modal está abierto
+      if (document.getElementById("myReservationsModal").classList.contains("show")) {
+        loadUserReservations()
+      }
+    })
+    .catch((error) => {
+      console.error("Error al procesar pago:", error)
+
+      // Restaurar botón
+      submitBtn.innerHTML = originalBtnText
+      submitBtn.disabled = false
+
+      // Mostrar mensaje de error
+      alert("Error al procesar el pago. Por favor, inténtelo de nuevo.")
     })
 }
 
@@ -563,7 +835,7 @@ function setupMyReservations() {
   }
 }
 
-// Modificar la función loadUserReservations para mostrar el precio de la habitación
+// Cargar las reservas del usuario en el modal
 function loadUserReservations() {
   const reservationsContainer = document.getElementById("userReservationsList")
 
@@ -571,13 +843,13 @@ function loadUserReservations() {
 
   // Mostrar indicador de carga
   reservationsContainer.innerHTML = `
-   <div class="text-center py-5">
-     <div class="spinner-border text-primary" role="status">
-       <span class="visually-hidden">Cargando...</span>
-     </div>
-     <p class="mt-2">Cargando sus reservas...</p>
-   </div>
- `
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <p class="mt-2">Cargando sus reservas...</p>
+    </div>
+  `
 
   // Obtener reservas del usuario
   getUserReservations()
@@ -592,58 +864,56 @@ function loadUserReservations() {
           if (reserva.estado === "confirmada") statusClass = "bg-success"
           if (reserva.estado === "cancelada") statusClass = "bg-danger"
 
-          // Calcular el total de la estancia
-          const checkIn = new Date(reserva.fecha_inicio)
-          const checkOut = new Date(reserva.fecha_fin)
-          const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
-          const totalPrice = nights * (reserva.precio_por_noche || 0)
+          // Calcular el monto total si está disponible
+          const montoTotal = reserva.monto_total ? `$${reserva.monto_total}` : "No disponible"
+
+          // Verificar si el pago está pendiente
+          const pagoPendiente = reserva.estado !== "cancelada" && !reserva.fecha_pago
 
           html += `
-           <div class="reservation-card mb-3">
-             <div class="card">
-               <div class="card-header d-flex justify-content-between align-items-center">
-                 <h5 class="mb-0">Reserva #${reserva.id}</h5>
-                 <span class="badge ${statusClass}">${reserva.estado.toUpperCase()}</span>
-               </div>
-               <div class="card-body">
-                 <div class="row">
-                   <div class="col-md-6">
-                     <p><strong><i class="fas fa-calendar-alt me-2"></i>Check-in:</strong> ${formatDate(reserva.fecha_inicio)}</p>
-                     <p><strong><i class="fas fa-calendar-alt me-2"></i>Check-out:</strong> ${formatDate(reserva.fecha_fin)}</p>
-                     <p><strong><i class="fas fa-bed me-2"></i>Habitación:</strong> ${getTipoHabitacion(reserva.habitacion_tipo)}</p>
-                   </div>
-                   <div class="col-md-6">
-                     <p><strong><i class="fas fa-user-friends me-2"></i>Huéspedes:</strong> ${reserva.huespedes || "No especificado"}</p>
-                     <p><strong><i class="fas fa-comment-alt me-2"></i>Solicitudes:</strong> ${reserva.solicitudes_especiales || "Ninguna"}</p>
-                     <p><strong><i class="fas fa-clock me-2"></i>Fecha de reserva:</strong> ${formatDate(reserva.fecha_creacion)}</p>
-                   </div>
-                 </div>
-                 <div class="reservation-price mt-3 p-3 bg-light rounded">
-                   <div class="d-flex justify-content-between align-items-center">
-                     <div>
-                       <p class="mb-0"><strong>Precio por noche:</strong> $${reserva.precio_por_noche || 0}</p>
-                       <p class="mb-0"><strong>Noches:</strong> ${nights}</p>
-                     </div>
-                     <div>
-                       <h5 class="mb-0 text-primary">Total: $${totalPrice}</h5>
-                     </div>
-                   </div>
-                 </div>
-                 ${
-                   reserva.estado !== "cancelada"
-                     ? `
-                 <div class="text-end mt-3">
-                   <button class="btn btn-outline-danger btn-sm cancel-reservation" data-id="${reserva.id}">
-                     <i class="fas fa-times-circle me-1"></i>Cancelar reserva
-                   </button>
-                 </div>
-                 `
-                     : ""
-                 }
-               </div>
-             </div>
-           </div>
-         `
+            <div class="reservation-card mb-3">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0">Reserva #${reserva.id}</h5>
+                  <span class="badge ${statusClass}">${reserva.estado.toUpperCase()}</span>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <p><strong><i class="fas fa-calendar-alt me-2"></i>Check-in:</strong> ${formatDate(reserva.fecha_inicio)}</p>
+                      <p><strong><i class="fas fa-calendar-alt me-2"></i>Check-out:</strong> ${formatDate(reserva.fecha_fin)}</p>
+                      <p><strong><i class="fas fa-bed me-2"></i>Habitación:</strong> ${getTipoHabitacion(reserva.habitacion_tipo)} ${reserva.habitacion_numero ? `#${reserva.habitacion_numero}` : ""}</p>
+                    </div>
+                    <div class="col-md-6">
+                      <p><strong><i class="fas fa-money-bill-wave me-2"></i>Monto total:</strong> ${montoTotal}</p>
+                      <p><strong><i class="fas fa-credit-card me-2"></i>Estado de pago:</strong> ${reserva.fecha_pago ? `Pagado el ${formatDate(reserva.fecha_pago)}` : "Pendiente"}</p>
+                      <p><strong><i class="fas fa-clock me-2"></i>Fecha de reserva:</strong> ${formatDate(reserva.fecha_creacion)}</p>
+                    </div>
+                  </div>
+                  <div class="text-end mt-3">
+                    ${
+                      pagoPendiente
+                        ? `
+                    <button class="btn btn-success btn-sm me-2 pay-reservation" data-id="${reserva.id}" data-monto="${reserva.monto_total}">
+                      <i class="fas fa-credit-card me-1"></i>Pagar ahora
+                    </button>
+                    `
+                        : ""
+                    }
+                    ${
+                      reserva.estado !== "cancelada"
+                        ? `
+                    <button class="btn btn-outline-danger btn-sm cancel-reservation" data-id="${reserva.id}">
+                      <i class="fas fa-times-circle me-1"></i>Cancelar reserva
+                    </button>
+                    `
+                        : ""
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          `
         })
 
         reservationsContainer.innerHTML = html
@@ -657,20 +927,29 @@ function loadUserReservations() {
             }
           })
         })
+
+        // Agregar eventos a los botones de pago
+        document.querySelectorAll(".pay-reservation").forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const reservaId = this.getAttribute("data-id")
+            const monto = this.getAttribute("data-monto")
+            showPaymentForm(reservaId, monto)
+          })
+        })
       } else {
         // No hay reservas
         reservationsContainer.innerHTML = `
-         <div class="text-center py-5">
-           <div class="service-icon mb-3">
-             <i class="fas fa-calendar-times"></i>
-           </div>
-           <h4>No tiene reservas activas</h4>
-           <p>Realice una reserva para disfrutar de nuestras instalaciones.</p>
-           <a href="#reservas" class="btn btn-primary" data-bs-dismiss="modal">
-             <i class="fas fa-calendar-plus me-2"></i>Hacer una reserva
-           </a>
-         </div>
-       `
+          <div class="text-center py-5">
+            <div class="service-icon mb-3">
+              <i class="fas fa-calendar-times"></i>
+            </div>
+            <h4>No tiene reservas activas</h4>
+            <p>Realice una reserva para disfrutar de nuestras instalaciones.</p>
+            <a href="#reservas" class="btn btn-primary" data-bs-dismiss="modal">
+              <i class="fas fa-calendar-plus me-2"></i>Hacer una reserva
+            </a>
+          </div>
+        `
       }
     })
     .catch((error) => {
@@ -678,17 +957,17 @@ function loadUserReservations() {
 
       // Mostrar mensaje de error
       reservationsContainer.innerHTML = `
-       <div class="text-center py-5">
-         <div class="service-icon mb-3 bg-danger">
-           <i class="fas fa-exclamation-triangle text-white"></i>
-         </div>
-         <h4>Error al cargar reservas</h4>
-         <p>Ha ocurrido un error al cargar sus reservas. Por favor, inténtelo de nuevo más tarde.</p>
-         <button class="btn btn-primary" onclick="loadUserReservations()">
-           <i class="fas fa-sync-alt me-2"></i>Reintentar
-         </button>
-       </div>
-     `
+        <div class="text-center py-5">
+          <div class="service-icon mb-3 bg-danger">
+            <i class="fas fa-exclamation-triangle text-white"></i>
+          </div>
+          <h4>Error al cargar reservas</h4>
+          <p>Ha ocurrido un error al cargar sus reservas. Por favor, inténtelo de nuevo más tarde.</p>
+          <button class="btn btn-primary" onclick="loadUserReservations()">
+            <i class="fas fa-sync-alt me-2"></i>Reintentar
+          </button>
+        </div>
+      `
     })
 }
 
@@ -1260,68 +1539,6 @@ function verifyCode(email, code) {
 
 // URL base del backend en Render
 const backendBaseUrl = "https://hotelitus.onrender.com"
-
-// Función para crear una nueva reserva (POST)
-function createReserva(data) {
-  fetch(`${backendBaseUrl}/create`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  })
-    .then((response) => response.json())
-    .then((result) => {
-      console.log("✅ Reserva creada:", result)
-      alert("Reserva creada con éxito.")
-    })
-    .catch((error) => {
-      console.error("❌ Error al crear la reserva:", error)
-      alert("Error al crear la reserva.")
-    })
-}
-
-// Función para obtener todas las reservas (GET)
-function getReservas() {
-  fetch(`${backendBaseUrl}/select`)
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("📋 Reservas obtenidas:", data)
-      // TODO: mostrar los datos en una tabla o lista en el DOM
-    })
-    .catch((error) => {
-      console.error("❌ Error al obtener reservas:", error)
-      alert("Error al obtener reservas.")
-    })
-}
-
-// Función para actualizar una reserva (GET con query params)
-function updateReserva(id, nuevoNombre) {
-  fetch(`${backendBaseUrl}/update?id=${id}&nombre=${nuevoNombre}`)
-    .then((response) => response.json())
-    .then((result) => {
-      console.log("🔄 Reserva actualizada:", result)
-      alert("Reserva actualizada correctamente.")
-    })
-    .catch((error) => {
-      console.error("❌ Error al actualizar reserva:", error)
-      alert("Error al actualizar la reserva.")
-    })
-}
-
-// Función para eliminar una reserva (GET con query param)
-function deleteReserva(id) {
-  fetch(`${backendBaseUrl}/delete?id=${id}`)
-    .then((response) => response.json())
-    .then((result) => {
-      console.log("🗑️ Reserva eliminada:", result)
-      alert("Reserva eliminada correctamente.")
-    })
-    .catch((error) => {
-      console.error("❌ Error al eliminar reserva:", error)
-      alert("Error al eliminar la reserva.")
-    })
-}
 
 // Implementación mejorada del inicio de sesión con manejo de errores
 document.addEventListener("DOMContentLoaded", () => {
