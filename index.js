@@ -177,7 +177,7 @@ app.post("/reservar", async (req, res) => {
     if (habitacionResult.rows.length === 0) {
       // Si no existe el tipo de habitación, creamos uno
       const insertHabitacion = await pool.query(
-        "INSERT INTO habitaciones (tipo, capacidad, precio) VALUES ($1, $2, $3) RETURNING id",
+        "INSERT INTO habitaciones (tipo, capacidad, precio_por_noche) VALUES ($1, $2, $3) RETURNING id",
         [habitacion_tipo, huespedes || 2, habitacion_tipo === "suite" ? 280 : habitacion_tipo === "doble" ? 180 : 120],
       )
       habitacion_id = insertHabitacion.rows[0].id
