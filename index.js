@@ -439,6 +439,89 @@ app.post("/cancelar-reserva", async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Ruta para obtener datos del usuario
+app.post("/get-user-data", async (req, res) => {
+  try {
+    const { correo } = req.body;
+    
+    if (!correo) {
+      return res.status(400).json({ success: false, message: "Correo no proporcionado" });
+    }
+    
+    const result = await pool.query("SELECT id, nombre, correo, telefono FROM usuarios WHERE correo = $1", [correo]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+    }
+    
+    res.status(200).json({
+      success: true,
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Error al obtener datos del usuario:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pool
   .connect()
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
