@@ -192,16 +192,26 @@ app.post("/reservar", async (req, res) => {
     )
 
     // Si no hay habitaciones disponibles del tipo solicitado
+    let habitacion_id
     if (habitacionDisponible.rows.length === 0) {
-      // Intentar crear una habitación si no existe (para propósitos de demostración)
-      const nuevaHabitacion = await pool.query(
-        "INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES ($1, $2, $3, $4) RETURNING id",
-        [habitacion_tipo, Math.floor(Math.random() * 100) + 100, obtenerPrecioPorTipo(habitacion_tipo), true],
-      )
+      // Verificar si ya existe una habitación del tipo solicitado
+      const habitacionExistente = await pool.query("SELECT id FROM habitaciones WHERE tipo = $1 LIMIT 1", [
+        habitacion_tipo,
+      ])
 
-      var habitacion_id = nuevaHabitacion.rows[0].id
+      if (habitacionExistente.rows.length > 0) {
+        // Si existe una habitación del tipo pero no está disponible para las fechas
+        habitacion_id = habitacionExistente.rows[0].id
+      } else {
+        // Si no existe ninguna habitación del tipo, crear una nueva con SERIAL
+        const nuevaHabitacion = await pool.query(
+          "INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES ($1, $2, $3, $4) RETURNING id",
+          [habitacion_tipo, Math.floor(Math.random() * 100) + 100, obtenerPrecioPorTipo(habitacion_tipo), true],
+        )
+        habitacion_id = nuevaHabitacion.rows[0].id
+      }
     } else {
-      var habitacion_id = habitacionDisponible.rows[0].id
+      habitacion_id = habitacionDisponible.rows[0].id
     }
 
     // Insertar la reserva
