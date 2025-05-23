@@ -7,6 +7,8 @@ import nodemailer from "nodemailer"
 
 import path from "path"
 import { fileURLToPath } from "url"
+import mercadopago from "mercadopago"
+
 
 config()
 
@@ -379,3 +381,38 @@ pool
 
 app.listen(3000)
 console.log("server on port ", 3000)
+
+
+// Configurá Mercado Pago con tu Access Token de prueba
+mercadopago.configure({
+  access_token: process.env.MP_ACCESS_TOKEN,
+}
+
+app.post("/crear-preferencia", async (req, res) => {
+  try {
+    const { nombreProducto, precio, cantidad } = req.body
+
+    const preference = {
+      items: [
+        {
+          title: nombreProducto || "Reserva Hotelitus",
+          unit_price: Number(precio) || 200,
+          quantity: Number(cantidad) || 1,
+        },
+      ],
+      back_urls: {
+        success: "https://hotelituss1.vercel.app/pago-exitoso",
+        failure: "https://hotelituss1.vercel.app/pago-fallido",
+        pending: "https://hotelituss1.vercel.app/pago-pendiente",
+      },
+      auto_return: "approved",
+    }
+
+    const response = await mercadopago.preferences.create(preference)
+
+    res.status(200).json({ id: response.body.id })
+  } catch (error) {
+    console.error("Error al crear preferencia:", error)
+    res.status(500).json({ error: "No se pudo crear la preferencia" })
+  }
+})
