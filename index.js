@@ -1,22 +1,20 @@
-import express, { query } from 'express';
-import {config} from 'dotenv';
-import pg from 'pg';
-import cors from 'cors';
-import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import express from "express"
+import { config } from "dotenv"
+import pg from "pg"
+import cors from "cors"
+import crypto from "crypto"
+import nodemailer from "nodemailer"
 
-import path from "path" // Para manejar rutas (NUEVO)
-import { fileURLToPath } from "url" // Necesario para manejar __dirname (NUEVO)
+import path from "path"
+import { fileURLToPath } from "url"
 
 config()
 
-//NUEVO
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-
-const app = express();
-const usuariosPendientes = {};
+const app = express()
+const usuariosPendientes = {}
 
 //usar cors para validar datos a traves de las paginas
 app.use(
@@ -43,68 +41,68 @@ app.get("/", async (req, res) => {
 })
 
 //Crear usuario
-app.post('/create', async (req, res) => {
-    const { nombre, correo, telefono, password } = req.body;
+app.post("/create", async (req, res) => {
+  const { nombre, correo, telefono, password } = req.body
 
-    const codigo = crypto.randomInt(100000, 999999).toString(); // Código de 6 dígitos
+  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
 
-    usuariosPendientes[correo] = { codigo, nombre, telefono, password };
+  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-    const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: "infohotelituss@gmail.com",
-            pass: "pgfn jkao huuk czog"
-        }
-    });
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "infohotelituss@gmail.com",
+      pass: "pgfn jkao huuk czog",
+    },
+  })
 
-    const mailOptions = {
-        from: '"Hotelitus" <infohotelituss@gmail.com>',
-        to: correo,
-        subject: 'Código de verificación - Hotelitus',
-        html: `
+  const mailOptions = {
+    from: '"Hotelitus" <infohotelituss@gmail.com>',
+    to: correo,
+    subject: "Código de verificación - Hotelitus",
+    html: `
             <h2>Hola ${nombre} 👋</h2>
             <p>Tu código de verificación es:</p>
             <h3>${codigo}</h3>
             <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `
-    };
+        `,
+  }
 
-    await transporter.sendMail(mailOptions);
+  await transporter.sendMail(mailOptions)
 
-    // Respondemos al frontend para mostrar el modal
-    res.json({ success: true });
-});
+  // Respondemos al frontend para mostrar el modal
+  res.json({ success: true })
+})
 
 //Verificar codigo
-app.post('/verify-code', async (req, res) => {
-    const { correo, codigo } = req.body;
+app.post("/verify-code", async (req, res) => {
+  const { correo, codigo } = req.body
 
-    const usuarioPendiente = usuariosPendientes[correo];
+  const usuarioPendiente = usuariosPendientes[correo]
 
-    if (!usuarioPendiente) {
-        return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." });
-    }
+  if (!usuarioPendiente) {
+    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
+  }
 
-    if (usuarioPendiente.codigo !== codigo) {
-        return res.status(401).json({ success: false, message: "Código incorrecto." });
-    }
+  if (usuarioPendiente.codigo !== codigo) {
+    return res.status(401).json({ success: false, message: "Código incorrecto." })
+  }
 
-    // Código correcto, insertamos en la DB
-    const { nombre, telefono, password } = usuarioPendiente;
+  // Código correcto, insertamos en la DB
+  const { nombre, telefono, password } = usuarioPendiente
 
-    await pool.query(
-        "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);",
-        [nombre, correo, telefono, password]
-    );
+  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
+    nombre,
+    correo,
+    telefono,
+    password,
+  ])
 
-    // Eliminamos de la lista temporal
-    delete usuariosPendientes[correo];
+  // Eliminamos de la lista temporal
+  delete usuariosPendientes[correo]
 
-    res.json({ success: true });
-});
-
-
+  res.json({ success: true })
+})
 
 //iniciar sesion
 app.post("/sesion", async (req, res) => {
@@ -150,58 +148,204 @@ app.post("/sesion", async (req, res) => {
   }
 })
 
+// Ruta para realizar reservas
 app.post("/reservar", async (req, res) => {
-  const { nombre, correo, fecha_inicio, fecha_fin, habitacion_tipo, estado } = req.body
-
   try {
-    // Buscar o crear usuario
-    const usuario = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
-    let usuario_id
+    const {
+      usuario_id,
+      habitacion_id,
+      fecha_inicio,
+      fecha_fin,
+      estado,
+      nombre,
+      correo,
+      huespedes,
+      solicitudes_especiales,
+    } = req.body
 
-    if (usuario.rows.length === 0) {
-      const insertUser = await pool.query(
-        "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-        [nombre, correo, "default123"], // contraseña por defecto, ideal cambiar luego
-      )
-      usuario_id = insertUser.rows[0].id
-    } else {
-      usuario_id = usuario.rows[0].id
+    let userId = usuario_id
+
+    // Si no se proporciona usuario_id pero sí correo, buscar el usuario por correo
+    if (!userId && correo) {
+      const userResult = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+
+      if (userResult.rows.length > 0) {
+        userId = userResult.rows[0].id
+      } else {
+        // Si el usuario no existe, crearlo
+        const newUserResult = await pool.query(
+          "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
+          [nombre, correo, "password_temporal"],
+        )
+        userId = newUserResult.rows[0].id
+      }
     }
 
-    // Insertar reserva
-    await pool.query(
-      "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5)",
-      [usuario_id, habitacion_tipo, fecha_inicio, fecha_fin, estado || "pendiente"],
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" })
+    }
+
+    // Verificar disponibilidad de la habitación
+    const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1 AND disponible = true", [
+      habitacion_id,
+    ])
+
+    if (habitacionResult.rows.length === 0) {
+      return res.status(400).json({ success: false, message: "La habitación seleccionada no está disponible" })
+    }
+
+    // Crear la reserva
+    const reservaResult = await pool.query(
+      "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      [userId, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente"],
     )
 
-    res.send(
-      '<script>alert("¡Reserva realizada con éxito!"); window.location.href = "https://hotelituss1.vercel.app/";</script>',
-    )
-  } catch (err) {
-    console.error(err)
-    res.status(500).send("Error al realizar la reserva")
+    const reservaId = reservaResult.rows[0].id
+
+    // Actualizar disponibilidad de la habitación
+    await pool.query("UPDATE habitaciones SET disponible = false WHERE id = $1", [habitacion_id])
+
+    res.status(200).json({
+      success: true,
+      message: "Reserva creada con éxito",
+      reserva_id: reservaId,
+    })
+  } catch (error) {
+    console.error("Error al crear reserva:", error)
+    res.status(500).json({ success: false, message: "Error al procesar la reserva" })
   }
 })
 
-// select de reserva para comprobar
-app.get("/select_reserva", async (req, res) => {
-  const result = await pool.query("SELECT * FROM reservas")
-  return res.json(result.rows)
+// Ruta para obtener las reservas de un usuario
+app.post("/user-reservations", async (req, res) => {
+  try {
+    const { usuario_id, correo } = req.body
+
+    let query
+    let params
+
+    if (usuario_id) {
+      query = `
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
+        FROM reservas r
+        JOIN habitaciones h ON r.habitacion_id = h.id
+        WHERE r.usuario_id = $1
+        ORDER BY r.fecha_inicio DESC
+      `
+      params = [usuario_id]
+    } else if (correo) {
+      query = `
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
+        FROM reservas r
+        JOIN habitaciones h ON r.habitacion_id = h.id
+        JOIN usuarios u ON r.usuario_id = u.id
+        WHERE u.correo = $1
+        ORDER BY r.fecha_inicio DESC
+      `
+      params = [correo]
+    } else {
+      return res.status(400).json({ success: false, message: "Se requiere ID de usuario o correo" })
+    }
+
+    const result = await pool.query(query, params)
+
+    res.status(200).json({
+      success: true,
+      reservas: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener reservas:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las reservas" })
+  }
 })
 
-app.get("/select", async (req, res) => {
-  const result = await pool.query("SELECT * FROM usuarios")
-  return res.json(result.rows)
+// Ruta para cancelar una reserva
+app.post("/cancel-reservation", async (req, res) => {
+  try {
+    const { id } = req.body
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "ID de reserva no proporcionado" })
+    }
+
+    // Obtener información de la reserva
+    const reservaResult = await pool.query("SELECT habitacion_id FROM reservas WHERE id = $1", [id])
+
+    if (reservaResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Reserva no encontrada" })
+    }
+
+    const habitacionId = reservaResult.rows[0].habitacion_id
+
+    // Actualizar estado de la reserva
+    await pool.query("UPDATE reservas SET estado = 'cancelada' WHERE id = $1", [id])
+
+    // Actualizar disponibilidad de la habitación
+    await pool.query("UPDATE habitaciones SET disponible = true WHERE id = $1", [habitacionId])
+
+    res.status(200).json({
+      success: true,
+      message: "Reserva cancelada con éxito",
+    })
+  } catch (error) {
+    console.error("Error al cancelar reserva:", error)
+    res.status(500).json({ success: false, message: "Error al cancelar la reserva" })
+  }
 })
 
-app.get("/update", async (req, res) => {
-  const result = await pool.query("UPDATE usuarios SET nombre = 'Lautaro', correo = 'Lautaro@gmail.com' WHERE id = 18;")
-  res.send("se actualizo el usuario")
+// Ruta para obtener datos del usuario
+app.post("/get-user-data", async (req, res) => {
+  try {
+    const { correo } = req.body
+
+    if (!correo) {
+      return res.status(400).json({ success: false, message: "Correo no proporcionado" })
+    }
+
+    const result = await pool.query("SELECT id, nombre, correo, telefono FROM usuarios WHERE correo = $1", [correo])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" })
+    }
+
+    res.status(200).json({
+      success: true,
+      user: result.rows[0],
+    })
+  } catch (error) {
+    console.error("Error al obtener datos del usuario:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
 })
 
-app.get("/delete", async (req, res) => {
-  const result = await pool.query("DELETE FROM usuarios;")
-  res.send("se elimino el usuario")
+// Inicializar habitaciones si no existen
+app.get("/init-habitaciones", async (req, res) => {
+  try {
+    // Verificar si ya existen habitaciones
+    const checkResult = await pool.query("SELECT COUNT(*) FROM habitaciones")
+
+    if (Number.parseInt(checkResult.rows[0].count) > 0) {
+      return res.status(200).json({ message: "Las habitaciones ya están inicializadas" })
+    }
+
+    // Crear habitaciones iniciales
+    await pool.query(`
+      INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES
+      ('individual', 101, 120, true),
+      ('individual', 102, 120, true),
+      ('individual', 103, 120, true),
+      ('doble', 201, 180, true),
+      ('doble', 202, 180, true),
+      ('doble', 203, 180, true),
+      ('suite', 301, 280, true),
+      ('suite', 302, 280, true)
+    `)
+
+    res.status(200).json({ success: true, message: "Habitaciones inicializadas correctamente" })
+  } catch (error) {
+    console.error("Error al inicializar habitaciones:", error)
+    res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
+  }
 })
 
 // Ruta para verificar el estado del servidor
@@ -214,31 +358,5 @@ pool
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
-// Ruta para obtener datos del usuario
-app.post("/get-user-data", async (req, res) => {
-  try {
-    const { correo } = req.body;
-    
-    if (!correo) {
-      return res.status(400).json({ success: false, message: "Correo no proporcionado" });
-    }
-    
-    const result = await pool.query("SELECT id, nombre, correo, telefono FROM usuarios WHERE correo = $1", [correo]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
-    }
-    
-    res.status(200).json({
-      success: true,
-      user: result.rows[0]
-    });
-  } catch (error) {
-    console.error("Error al obtener datos del usuario:", error);
-    res.status(500).json({ success: false, message: "Error del servidor" });
-  }
-});
-
-  
 app.listen(3000)
 console.log("server on port ", 3000)
