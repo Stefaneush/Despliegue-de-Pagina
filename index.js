@@ -7,8 +7,6 @@ import nodemailer from "nodemailer"
 
 import path from "path"
 import { fileURLToPath } from "url"
-import mercadopago from "mercadopago"
-
 
 config()
 
@@ -194,8 +192,10 @@ app.post("/reservar", async (req, res) => {
       return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" });
     }
 
-    // Verificar disponibilidad de la habitación
-    console.log("Verificando disponibilidad de habitación ID:", habitacion_id);
+    // Verificar disponibilidad de la habitación para las fechas solicitadas
+    console.log("Verificando disponibilidad de habitación ID:", habitacion_id, "para fechas:", fecha_inicio, "a", fecha_fin);
+    
+    // Primero verificamos que la habitación exista
     const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1", [habitacion_id]);
 
     if (habitacionResult.rows.length === 0) {
@@ -203,9 +203,25 @@ app.post("/reservar", async (req, res) => {
       return res.status(400).json({ success: false, message: "La habitación seleccionada no existe" });
     }
 
-    if (!habitacionResult.rows[0].disponible) {
-      console.error("Habitación no disponible");
-      return res.status(400).json({ success: false, message: "La habitación seleccionada no está disponible" });
+    // Verificar si hay reservas que se solapan con las fechas solicitadas
+    const reservasExistentes = await pool.query(
+      `SELECT * FROM reservas 
+       WHERE habitacion_id = $1 
+       AND estado != 'cancelada'
+       AND (
+         (fecha_inicio <= $2 AND fecha_fin >= $2) OR
+         (fecha_inicio <= $3 AND fecha_fin >= $3) OR
+         (fecha_inicio >= $2 AND fecha_fin <= $3)
+       )`,
+      [habitacion_id, fecha_inicio, fecha_fin]
+    );
+
+    if (reservasExistentes.rows.length > 0) {
+      console.error("Habitación no disponible para las fechas seleccionadas");
+      return res.status(400).json({ 
+        success: false, 
+        message: "La habitación seleccionada no está disponible para las fechas indicadas. Por favor, seleccione otras fechas o tipo de habitación." 
+      });
     }
 
     // Crear la reserva
@@ -217,10 +233,6 @@ app.post("/reservar", async (req, res) => {
 
     const reservaId = reservaResult.rows[0].id;
     console.log("Reserva creada con ID:", reservaId);
-
-    // Actualizar disponibilidad de la habitación
-    await pool.query("UPDATE habitaciones SET disponible = false WHERE id = $1", [habitacion_id]);
-    console.log("Habitación marcada como no disponible");
 
     res.status(200).json({
       success: true,
@@ -301,9 +313,6 @@ app.post("/cancel-reservation", async (req, res) => {
     // Actualizar estado de la reserva
     await pool.query("UPDATE reservas SET estado = 'cancelada' WHERE id = $1", [id])
 
-    // Actualizar disponibilidad de la habitación
-    await pool.query("UPDATE habitaciones SET disponible = true WHERE id = $1", [habitacionId])
-
     res.status(200).json({
       success: true,
       message: "Reserva cancelada con éxito",
@@ -381,38 +390,3 @@ pool
 
 app.listen(3000)
 console.log("server on port ", 3000)
-
-
-// Configurá Mercado Pago con tu Access Token de prueba
-mercadopago.configure({
-  access_token: 'APP_USR-4042032952455773-052221-e12625a5c331428f07fc27d2e0a5cb66-2452456537'
-},
-
-app.post("/crear-preferencia", async (req, res) => {
-  try {
-    const { nombreProducto, precio, cantidad } = req.body
-
-    const preference = {
-      items: [
-        {
-          title: nombreProducto || "Reserva Hotelitus",
-          unit_price: Number(precio) || 200,
-          quantity: Number(cantidad) || 1,
-        },
-      ],
-      back_urls: {
-        success: "https://hotelituss1.vercel.app/",
-        failure: "https://hotelituss1.vercel.app/pago-fallido",
-        pending: "https://hotelituss1.vercel.app/pago-pendiente",
-      },
-      auto_return: "approved",
-    }
-
-    const response = await mercadopago.preferences.create(preference)
-
-    res.status(200).json({ id: response.body.id })
-  } catch (error) {
-    console.error("Error al crear preferencia:", error)
-    res.status(500).json({ error: "No se pudo crear la preferencia" })
-  }
-}))
