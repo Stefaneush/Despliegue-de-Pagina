@@ -385,7 +385,7 @@ console.log("server on port ", 3000)
 
 // Configurá Mercado Pago con tu Access Token de prueba
 mercadopago.configure({
-  access_token: process.env.MP_ACCESS_TOKEN,
+  access_token: APP_USR-4042032952455773-052221-e12625a5c331428f07fc27d2e0a5cb66-2452456537,
 }
 
 app.post("/crear-preferencia", async (req, res) => {
