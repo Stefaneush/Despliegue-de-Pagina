@@ -11,13 +11,10 @@ import { fileURLToPath } from "url"
 
 config()
 
-// Verificar que las variables de entorno estén configuradas
-if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
-  console.error("❌ MERCADOPAGO_ACCESS_TOKEN no está configurado en las variables de entorno")
-  process.exit(1)
-}
+// Access Token de prueba directamente en el código
+const MERCADOPAGO_ACCESS_TOKEN = "APP_USR-4042032952455773-052221-e12625a5c331428f07fc27d2e0a5cb66-2452456537"
 
-console.log("✅ MercadoPago configurado correctamente")
+console.log("✅ MercadoPago configurado correctamente con Access Token de prueba")
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -27,7 +24,7 @@ const usuariosPendientes = {}
 
 // Configurar MercadoPago
 const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  accessToken: MERCADOPAGO_ACCESS_TOKEN,
 })
 
 //usar cors para validar datos a traves de las paginas
@@ -62,7 +59,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
@@ -308,7 +305,11 @@ app.post("/reservar", async (req, res) => {
       notification_url: `https://hotelitus.onrender.com/webhook-mercadopago`,
     }
 
+    console.log("Creando preferencia de MercadoPago con datos:", JSON.stringify(preferenceData, null, 2))
+
     const result = await preference.create({ body: preferenceData })
+
+    console.log("Preferencia creada exitosamente:", result.id)
 
     // Guardar el preference_id en la reserva
     await pool.query("UPDATE reservas SET preference_id = $1 WHERE id = $2", [result.id, reservaId])
@@ -319,6 +320,7 @@ app.post("/reservar", async (req, res) => {
       reserva_id: reservaId,
       payment_url: result.init_point, // URL para redirigir al usuario a MercadoPago
       preference_id: result.id,
+      precio_total: precioTotal,
     })
   } catch (error) {
     console.error("Error detallado al crear reserva:", error)
@@ -333,17 +335,16 @@ app.post("/reservar", async (req, res) => {
 // Webhook para recibir notificaciones de MercadoPago
 app.post("/webhook-mercadopago", async (req, res) => {
   try {
+    console.log("Webhook recibido:", req.body)
     const { type, data } = req.body
 
     if (type === "payment") {
       const paymentId = data.id
+      console.log("Notificación de pago recibida, ID:", paymentId)
 
       // Aquí deberías verificar el pago con la API de MercadoPago
-      // Por simplicidad, asumimos que el pago fue exitoso
-      console.log("Pago recibido:", paymentId)
-
-      // Actualizar el estado de la reserva basado en el external_reference
-      // En un caso real, deberías hacer una consulta a la API de MercadoPago para verificar el estado
+      // Por simplicidad en pruebas, asumimos que el pago fue exitoso
+      console.log("Procesando pago:", paymentId)
     }
 
     res.status(200).send("OK")
@@ -358,6 +359,8 @@ app.post("/payment-result", async (req, res) => {
   try {
     const { payment_status, reserva_id } = req.body
 
+    console.log("Procesando resultado de pago:", { payment_status, reserva_id })
+
     let nuevoEstado
     if (payment_status === "success" || payment_status === "approved") {
       nuevoEstado = "confirmada"
@@ -369,6 +372,8 @@ app.post("/payment-result", async (req, res) => {
 
     // Actualizar el estado de la reserva
     await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevoEstado, reserva_id])
+
+    console.log(`Reserva ${reserva_id} actualizada a estado: ${nuevoEstado}`)
 
     res.json({ success: true, estado: nuevoEstado })
   } catch (error) {
@@ -508,7 +513,12 @@ app.get("/init-habitaciones", async (req, res) => {
 
 // Ruta para verificar el estado del servidor
 app.get("/status", (req, res) => {
-  res.status(200).json({ status: "ok", message: "Servidor funcionando correctamente" })
+  res.status(200).json({
+    status: "ok",
+    message: "Servidor funcionando correctamente",
+    mercadopago: "configurado",
+    timestamp: new Date().toISOString(),
+  })
 })
 
 pool
@@ -517,4 +527,5 @@ pool
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
 app.listen(3000)
-console.log("server on port ", 3000)
+console.log("🚀 Servidor iniciado en puerto 3000")
+console.log("💳 MercadoPago configurado con Access Token de prueba")
