@@ -159,20 +159,29 @@ app.post("/sesion", async (req, res) => {
   }
 })
 
-// Función para calcular el precio total de la reserva
+// Función para calcular el precio total de la reserva en PESOS ARGENTINOS
 function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
+  // Precios por noche en PESOS ARGENTINOS
   const precios = {
-    1: 120, // individual
-    2: 180, // doble
-    3: 280, // suite
+    1: 25000, // individual - $25,000 ARS por noche
+    2: 35000, // doble - $35,000 ARS por noche
+    3: 50000, // suite - $50,000 ARS por noche
   }
 
   const fechaInicio = new Date(fecha_inicio)
   const fechaFin = new Date(fecha_fin)
   const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
-  const precioPorNoche = precios[habitacion_id] || 120
+  const precioPorNoche = precios[habitacion_id] || 25000
 
-  return noches * precioPorNoche
+  const precioTotal = noches * precioPorNoche
+
+  console.log(`Cálculo de precio:`)
+  console.log(`- Habitación ID: ${habitacion_id}`)
+  console.log(`- Precio por noche: $${precioPorNoche.toLocaleString("es-AR")} ARS`)
+  console.log(`- Número de noches: ${noches}`)
+  console.log(`- Precio total: $${precioTotal.toLocaleString("es-AR")} ARS`)
+
+  return precioTotal
 }
 
 // Ruta para realizar reservas - MODIFICADA PARA MERCADOPAGO
@@ -269,7 +278,7 @@ app.post("/reservar", async (req, res) => {
     const reservaId = reservaResult.rows[0].id
     console.log("Reserva creada con ID:", reservaId)
 
-    // Calcular el precio total
+    // Calcular el precio total en PESOS ARGENTINOS
     const precioTotal = calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin)
 
     // Crear preferencia de MercadoPago
@@ -287,7 +296,7 @@ app.post("/reservar", async (req, res) => {
           title: `Reserva ${tiposHabitacion[habitacion_id]} - Hotelituss`,
           description: `Reserva del ${fecha_inicio} al ${fecha_fin}`,
           quantity: 1,
-          currency_id: "USD",
+          currency_id: "ARS", // Cambiado a PESOS ARGENTINOS
           unit_price: precioTotal,
         },
       ],
@@ -321,6 +330,7 @@ app.post("/reservar", async (req, res) => {
       payment_url: result.init_point, // URL para redirigir al usuario a MercadoPago
       preference_id: result.id,
       precio_total: precioTotal,
+      precio_formateado: `$${precioTotal.toLocaleString("es-AR")} ARS`,
     })
   } catch (error) {
     console.error("Error detallado al crear reserva:", error)
@@ -491,20 +501,20 @@ app.get("/init-habitaciones", async (req, res) => {
       return res.status(200).json({ message: "Las habitaciones ya están inicializadas" })
     }
 
-    // Crear habitaciones iniciales
+    // Crear habitaciones iniciales con precios en PESOS ARGENTINOS
     await pool.query(`
       INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES
-      ('individual', 101, 120, true),
-      ('individual', 102, 120, true),
-      ('individual', 103, 120, true),
-      ('doble', 201, 180, true),
-      ('doble', 202, 180, true),
-      ('doble', 203, 180, true),
-      ('suite', 301, 280, true),
-      ('suite', 302, 280, true)
+      ('individual', 101, 25000, true),
+      ('individual', 102, 25000, true),
+      ('individual', 103, 25000, true),
+      ('doble', 201, 35000, true),
+      ('doble', 202, 35000, true),
+      ('doble', 203, 35000, true),
+      ('suite', 301, 50000, true),
+      ('suite', 302, 50000, true)
     `)
 
-    res.status(200).json({ success: true, message: "Habitaciones inicializadas correctamente" })
+    res.status(200).json({ success: true, message: "Habitaciones inicializadas correctamente con precios en ARS" })
   } catch (error) {
     console.error("Error al inicializar habitaciones:", error)
     res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
@@ -517,6 +527,7 @@ app.get("/status", (req, res) => {
     status: "ok",
     message: "Servidor funcionando correctamente",
     mercadopago: "configurado",
+    currency: "ARS",
     timestamp: new Date().toISOString(),
   })
 })
@@ -529,3 +540,4 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
+console.log("💰 Precios configurados en PESOS ARGENTINOS (ARS)")
