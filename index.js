@@ -194,6 +194,29 @@ async function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
   }
 }
 
+// Función para registrar el pago en la tabla pagos
+async function registrarPago(reserva_id, monto) {
+  try {
+    const fechaActual = new Date().toISOString().split("T")[0] // Formato YYYY-MM-DD
+
+    const result = await pool.query(
+      "INSERT INTO pagos (reserva_id, monto, fecha_pago) VALUES ($1, $2, $3) RETURNING id",
+      [reserva_id, monto, fechaActual],
+    )
+
+    console.log(`✅ Pago registrado en tabla pagos:`)
+    console.log(`- ID Pago: ${result.rows[0].id}`)
+    console.log(`- Reserva ID: ${reserva_id}`)
+    console.log(`- Monto: $${monto} ARS`)
+    console.log(`- Fecha: ${fechaActual}`)
+
+    return result.rows[0].id
+  } catch (error) {
+    console.error("❌ Error al registrar pago:", error)
+    throw error
+  }
+}
+
 // Ruta para realizar reservas - MODIFICADA PARA MERCADOPAGO
 app.post("/reservar", async (req, res) => {
   try {
@@ -326,6 +349,10 @@ app.post("/reservar", async (req, res) => {
       auto_return: "approved",
       external_reference: reservaId.toString(),
       notification_url: `https://hotelitus.onrender.com/webhook-mercadopago`,
+      metadata: {
+        reserva_id: reservaId,
+        monto: precioTotal,
+      },
     }
 
     console.log("Creando preferencia de MercadoPago con datos:", JSON.stringify(preferenceData, null, 2))
@@ -378,7 +405,7 @@ app.post("/webhook-mercadopago", async (req, res) => {
   }
 })
 
-// Endpoint para manejar el retorno de MercadoPago
+// Endpoint para manejar el retorno de MercadoPago - ACTUALIZADO PARA REGISTRAR PAGOS
 app.post("/payment-result", async (req, res) => {
   try {
     const { payment_status, reserva_id } = req.body
@@ -399,6 +426,35 @@ app.post("/payment-result", async (req, res) => {
 
     console.log(`Reserva ${reserva_id} actualizada a estado: ${nuevoEstado}`)
 
+    // Si el pago fue exitoso, registrarlo en la tabla pagos
+    if (nuevoEstado === "confirmada") {
+      try {
+        // Obtener el monto de la reserva
+        const reservaResult = await pool.query(
+          `
+          SELECT r.*, h.precio_por_noche 
+          FROM reservas r 
+          JOIN habitaciones h ON r.habitacion_id = h.id 
+          WHERE r.id = $1
+        `,
+          [reserva_id],
+        )
+
+        if (reservaResult.rows.length > 0) {
+          const reserva = reservaResult.rows[0]
+          const monto = await calcularPrecioReserva(reserva.habitacion_id, reserva.fecha_inicio, reserva.fecha_fin)
+
+          // Registrar el pago en la tabla pagos
+          const pagoId = await registrarPago(reserva_id, monto)
+
+          console.log(`✅ Pago confirmado y registrado con ID: ${pagoId}`)
+        }
+      } catch (error) {
+        console.error("❌ Error al registrar pago, pero reserva confirmada:", error)
+        // No fallar la respuesta aunque el registro del pago falle
+      }
+    }
+
     res.json({ success: true, estado: nuevoEstado })
   } catch (error) {
     console.error("Error al actualizar estado de reserva:", error)
@@ -406,7 +462,7 @@ app.post("/payment-result", async (req, res) => {
   }
 })
 
-// Ruta para obtener las reservas de un usuario
+// Ruta para obtener las reservas de un usuario CON INFORMACIÓN DE PAGOS
 app.post("/user-reservations", async (req, res) => {
   try {
     const { usuario_id, correo } = req.body
@@ -416,19 +472,23 @@ app.post("/user-reservations", async (req, res) => {
 
     if (usuario_id) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
+               p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
+        LEFT JOIN pagos p ON r.id = p.reserva_id
         WHERE r.usuario_id = $1
         ORDER BY r.fecha_inicio DESC
       `
       params = [usuario_id]
     } else if (correo) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
+               p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
         JOIN usuarios u ON r.usuario_id = u.id
+        LEFT JOIN pagos p ON r.id = p.reserva_id
         WHERE u.correo = $1
         ORDER BY r.fecha_inicio DESC
       `
@@ -446,6 +506,28 @@ app.post("/user-reservations", async (req, res) => {
   } catch (error) {
     console.error("Error al obtener reservas:", error)
     res.status(500).json({ success: false, message: "Error al obtener las reservas" })
+  }
+})
+
+// Nueva ruta para obtener todos los pagos
+app.get("/pagos", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT p.*, r.fecha_inicio, r.fecha_fin, h.tipo as habitacion_tipo, u.nombre as cliente_nombre
+      FROM pagos p
+      JOIN reservas r ON p.reserva_id = r.id
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      JOIN usuarios u ON r.usuario_id = u.id
+      ORDER BY p.fecha_pago DESC
+    `)
+
+    res.status(200).json({
+      success: true,
+      pagos: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener pagos:", error)
+    res.status(500).json({ success: false, message: "Error al obtener los pagos" })
   }
 })
 
@@ -530,6 +612,7 @@ app.get("/status", (req, res) => {
     mercadopago: "configurado",
     currency: "ARS",
     precios_desde_db: true,
+    tabla_pagos: "habilitada",
     timestamp: new Date().toISOString(),
   })
 })
@@ -542,4 +625,6 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
-console.log("💰 Precios obtenidos directamente de la base de datos")
+
+
+
