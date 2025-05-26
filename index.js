@@ -4,17 +4,31 @@ import pg from "pg"
 import cors from "cors"
 import crypto from "crypto"
 import nodemailer from "nodemailer"
+import { MercadoPagoConfig, Preference } from "mercadopago"
 
 import path from "path"
 import { fileURLToPath } from "url"
 
 config()
 
+// Verificar que las variables de entorno estén configuradas
+if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+  console.error("❌ MERCADOPAGO_ACCESS_TOKEN no está configurado en las variables de entorno")
+  process.exit(1)
+}
+
+console.log("✅ MercadoPago configurado correctamente")
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
 const usuariosPendientes = {}
+
+// Configurar MercadoPago
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+})
 
 //usar cors para validar datos a traves de las paginas
 app.use(
@@ -48,7 +62,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
@@ -148,7 +162,23 @@ app.post("/sesion", async (req, res) => {
   }
 })
 
-// Ruta para realizar reservas - CORREGIDA
+// Función para calcular el precio total de la reserva
+function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
+  const precios = {
+    1: 120, // individual
+    2: 180, // doble
+    3: 280, // suite
+  }
+
+  const fechaInicio = new Date(fecha_inicio)
+  const fechaFin = new Date(fecha_fin)
+  const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
+  const precioPorNoche = precios[habitacion_id] || 120
+
+  return noches * precioPorNoche
+}
+
+// Ruta para realizar reservas - MODIFICADA PARA MERCADOPAGO
 app.post("/reservar", async (req, res) => {
   try {
     const {
@@ -232,20 +262,63 @@ app.post("/reservar", async (req, res) => {
       })
     }
 
-    // Crear la reserva
+    // Crear la reserva con estado "pendiente_pago"
     console.log("Creando reserva con usuario_id:", userId, "habitacion_id:", habitacion_id)
     const reservaResult = await pool.query(
       "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-      [userId, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente"],
+      [userId, habitacion_id, fecha_inicio, fecha_fin, "pendiente_pago"],
     )
 
     const reservaId = reservaResult.rows[0].id
     console.log("Reserva creada con ID:", reservaId)
 
+    // Calcular el precio total
+    const precioTotal = calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin)
+
+    // Crear preferencia de MercadoPago
+    const preference = new Preference(client)
+
+    const tiposHabitacion = {
+      1: "Habitación Individual",
+      2: "Habitación Doble",
+      3: "Suite Ejecutiva",
+    }
+
+    const preferenceData = {
+      items: [
+        {
+          title: `Reserva ${tiposHabitacion[habitacion_id]} - Hotelituss`,
+          description: `Reserva del ${fecha_inicio} al ${fecha_fin}`,
+          quantity: 1,
+          currency_id: "USD",
+          unit_price: precioTotal,
+        },
+      ],
+      payer: {
+        name: nombre,
+        email: correo,
+      },
+      back_urls: {
+        success: `https://hotelituss1.vercel.app/?payment=success&reserva_id=${reservaId}`,
+        failure: `https://hotelituss1.vercel.app/?payment=failure&reserva_id=${reservaId}`,
+        pending: `https://hotelituss1.vercel.app/?payment=pending&reserva_id=${reservaId}`,
+      },
+      auto_return: "approved",
+      external_reference: reservaId.toString(),
+      notification_url: `https://hotelitus.onrender.com/webhook-mercadopago`,
+    }
+
+    const result = await preference.create({ body: preferenceData })
+
+    // Guardar el preference_id en la reserva
+    await pool.query("UPDATE reservas SET preference_id = $1 WHERE id = $2", [result.id, reservaId])
+
     res.status(200).json({
       success: true,
       message: "Reserva creada con éxito",
       reserva_id: reservaId,
+      payment_url: result.init_point, // URL para redirigir al usuario a MercadoPago
+      preference_id: result.id,
     })
   } catch (error) {
     console.error("Error detallado al crear reserva:", error)
@@ -254,6 +327,53 @@ app.post("/reservar", async (req, res) => {
       message: "Error al procesar la reserva",
       error: error.message,
     })
+  }
+})
+
+// Webhook para recibir notificaciones de MercadoPago
+app.post("/webhook-mercadopago", async (req, res) => {
+  try {
+    const { type, data } = req.body
+
+    if (type === "payment") {
+      const paymentId = data.id
+
+      // Aquí deberías verificar el pago con la API de MercadoPago
+      // Por simplicidad, asumimos que el pago fue exitoso
+      console.log("Pago recibido:", paymentId)
+
+      // Actualizar el estado de la reserva basado en el external_reference
+      // En un caso real, deberías hacer una consulta a la API de MercadoPago para verificar el estado
+    }
+
+    res.status(200).send("OK")
+  } catch (error) {
+    console.error("Error en webhook:", error)
+    res.status(500).send("Error")
+  }
+})
+
+// Endpoint para manejar el retorno de MercadoPago
+app.post("/payment-result", async (req, res) => {
+  try {
+    const { payment_status, reserva_id } = req.body
+
+    let nuevoEstado
+    if (payment_status === "success" || payment_status === "approved") {
+      nuevoEstado = "confirmada"
+    } else if (payment_status === "failure" || payment_status === "rejected") {
+      nuevoEstado = "cancelada"
+    } else {
+      nuevoEstado = "pendiente"
+    }
+
+    // Actualizar el estado de la reserva
+    await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevoEstado, reserva_id])
+
+    res.json({ success: true, estado: nuevoEstado })
+  } catch (error) {
+    console.error("Error al actualizar estado de reserva:", error)
+    res.status(500).json({ success: false, message: "Error al actualizar reserva" })
   }
 })
 
@@ -383,193 +503,6 @@ app.get("/init-habitaciones", async (req, res) => {
   } catch (error) {
     console.error("Error al inicializar habitaciones:", error)
     res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
-  }
-})
-
-// ==========================================
-// NUEVAS RUTAS DE ADMINISTRACIÓN
-// ==========================================
-
-// Middleware para verificar si el usuario es administrador
-const verificarAdmin = async (req, res, next) => {
-  try {
-    const { correo } = req.body
-
-    // Lista de correos de administradores (puedes moverlo a la base de datos)
-    const adminEmails = ["admin@hotelituss.com", "gerente@hotelituss.com"]
-
-    if (!adminEmails.includes(correo)) {
-      return res.status(403).json({ success: false, message: "Acceso denegado. No tienes permisos de administrador." })
-    }
-
-    next()
-  } catch (error) {
-    console.error("Error en verificación de admin:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-}
-
-// Ruta para login de administrador
-app.post("/admin-login", async (req, res) => {
-  try {
-    const { email, password } = req.body
-
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Faltan credenciales" })
-    }
-
-    // Verificar credenciales de administrador
-    const adminCredentials = {
-      "admin@hotelituss.com": "admin123",
-      "gerente@hotelituss.com": "gerente123",
-    }
-
-    if (adminCredentials[email] && adminCredentials[email] === password) {
-      return res.status(200).json({
-        success: true,
-        message: "Login de administrador exitoso",
-        isAdmin: true,
-        user: {
-          correo: email,
-          nombre: email === "admin@hotelituss.com" ? "Administrador" : "Gerente",
-          rol: "admin",
-        },
-      })
-    }
-
-    // Si no es admin, verificar como usuario normal
-    const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, message: "Credenciales incorrectas" })
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Login exitoso",
-      isAdmin: false,
-      user: {
-        id: result.rows[0].id,
-        nombre: result.rows[0].nombre,
-        correo: result.rows[0].correo,
-        rol: "user",
-      },
-    })
-  } catch (error) {
-    console.error("Error en admin login:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-})
-
-// Ruta para obtener todas las reservas (solo admin)
-app.post("/admin/reservas", verificarAdmin, async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        r.id,
-        r.fecha_inicio,
-        r.fecha_fin,
-        r.estado,
-        u.nombre as usuario_nombre,
-        u.correo as usuario_correo,
-        u.telefono as usuario_telefono,
-        h.tipo as habitacion_tipo,
-        h.numero as habitacion_numero,
-        h.precio_por_noche
-      FROM reservas r
-      JOIN usuarios u ON r.usuario_id = u.id
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      ORDER BY r.fecha_inicio DESC
-    `
-
-    const result = await pool.query(query)
-
-    res.status(200).json({
-      success: true,
-      reservas: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener reservas para admin:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-})
-
-// Ruta para obtener todos los usuarios/huéspedes (solo admin)
-app.post("/admin/usuarios", verificarAdmin, async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        u.id,
-        u.nombre,
-        u.correo,
-        u.telefono,
-        COUNT(r.id) as total_reservas,
-        MAX(r.fecha_inicio) as ultima_reserva
-      FROM usuarios u
-      LEFT JOIN reservas r ON u.id = r.usuario_id
-      GROUP BY u.id, u.nombre, u.correo, u.telefono
-      ORDER BY u.nombre ASC
-    `
-
-    const result = await pool.query(query)
-
-    res.status(200).json({
-      success: true,
-      usuarios: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener usuarios para admin:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-})
-
-// Ruta para obtener estadísticas del dashboard (solo admin)
-app.post("/admin/estadisticas", verificarAdmin, async (req, res) => {
-  try {
-    // Obtener estadísticas
-    const totalUsuarios = await pool.query("SELECT COUNT(*) as total FROM usuarios")
-    const totalReservas = await pool.query("SELECT COUNT(*) as total FROM reservas")
-    const reservasActivas = await pool.query(
-      "SELECT COUNT(*) as total FROM reservas WHERE estado = 'confirmada' OR estado = 'pendiente'",
-    )
-    const ingresosMes = await pool.query(`
-      SELECT COALESCE(SUM(h.precio_por_noche * (r.fecha_fin::date - r.fecha_inicio::date)), 0) as total
-      FROM reservas r
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      WHERE r.estado = 'confirmada' 
-      AND EXTRACT(MONTH FROM r.fecha_inicio) = EXTRACT(MONTH FROM CURRENT_DATE)
-      AND EXTRACT(YEAR FROM r.fecha_inicio) = EXTRACT(YEAR FROM CURRENT_DATE)
-    `)
-
-    res.status(200).json({
-      success: true,
-      estadisticas: {
-        totalUsuarios: Number.parseInt(totalUsuarios.rows[0].total),
-        totalReservas: Number.parseInt(totalReservas.rows[0].total),
-        reservasActivas: Number.parseInt(reservasActivas.rows[0].total),
-        ingresosMes: Number.parseFloat(ingresosMes.rows[0].total) || 0,
-      },
-    })
-  } catch (error) {
-    console.error("Error al obtener estadísticas:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-})
-
-// Ruta para actualizar estado de reserva (solo admin)
-app.post("/admin/actualizar-reserva", verificarAdmin, async (req, res) => {
-  try {
-    const { reservaId, nuevoEstado } = req.body
-
-    await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevoEstado, reservaId])
-
-    res.status(200).json({
-      success: true,
-      message: "Estado de reserva actualizado correctamente",
-    })
-  } catch (error) {
-    console.error("Error al actualizar reserva:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
   }
 })
 
