@@ -319,9 +319,9 @@ app.post("/reservar", async (req, res) => {
         email: correo,
       },
       back_urls: {
-        success: `https://hotelituss1.vercel.app/?payment=success&reserva_id=${reservaId}`,
-        failure: `https://hotelituss1.vercel.app/?payment=failure&reserva_id=${reservaId}`,
-        pending: `https://hotelituss1.vercel.app/?payment=pending&reserva_id=${reservaId}`,
+        success: `https://hotelituss-test.vercel.app//?payment=success&reserva_id=${reservaId}`,
+        failure: `https://hotelituss-test.vercel.app//?payment=failure&reserva_id=${reservaId}`,
+        pending: `https://hotelituss-test.vercel.app//?payment=pending&reserva_id=${reservaId}`,
       },
       auto_return: "approved",
       external_reference: reservaId.toString(),
