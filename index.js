@@ -48,7 +48,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
@@ -163,44 +163,51 @@ app.post("/reservar", async (req, res) => {
       solicitudes_especiales,
     } = req.body
 
-    console.log("Datos de reserva recibidos:", req.body);
-    
-    let userId = usuario_id;
+    console.log("Datos de reserva recibidos:", req.body)
+
+    let userId = usuario_id
 
     // Si no se proporciona usuario_id pero sí correo, buscar el usuario por correo
     if (!userId && correo) {
-      console.log("Buscando usuario por correo:", correo);
-      const userResult = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo]);
+      console.log("Buscando usuario por correo:", correo)
+      const userResult = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
 
       if (userResult.rows.length > 0) {
-        userId = userResult.rows[0].id;
-        console.log("Usuario encontrado por correo, ID:", userId);
+        userId = userResult.rows[0].id
+        console.log("Usuario encontrado por correo, ID:", userId)
       } else {
-        console.log("Usuario no encontrado, creando nuevo usuario con correo:", correo);
+        console.log("Usuario no encontrado, creando nuevo usuario con correo:", correo)
         // Si el usuario no existe, crearlo
         const newUserResult = await pool.query(
           "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-          [nombre || "Usuario", correo, "password_temporal"]
-        );
-        userId = newUserResult.rows[0].id;
-        console.log("Nuevo usuario creado, ID:", userId);
+          [nombre || "Usuario", correo, "password_temporal"],
+        )
+        userId = newUserResult.rows[0].id
+        console.log("Nuevo usuario creado, ID:", userId)
       }
     }
 
     if (!userId) {
-      console.error("No se pudo identificar al usuario");
-      return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" });
+      console.error("No se pudo identificar al usuario")
+      return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" })
     }
 
     // Verificar disponibilidad de la habitación para las fechas solicitadas
-    console.log("Verificando disponibilidad de habitación ID:", habitacion_id, "para fechas:", fecha_inicio, "a", fecha_fin);
-    
+    console.log(
+      "Verificando disponibilidad de habitación ID:",
+      habitacion_id,
+      "para fechas:",
+      fecha_inicio,
+      "a",
+      fecha_fin,
+    )
+
     // Primero verificamos que la habitación exista
-    const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1", [habitacion_id]);
+    const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1", [habitacion_id])
 
     if (habitacionResult.rows.length === 0) {
-      console.error("Habitación no encontrada");
-      return res.status(400).json({ success: false, message: "La habitación seleccionada no existe" });
+      console.error("Habitación no encontrada")
+      return res.status(400).json({ success: false, message: "La habitación seleccionada no existe" })
     }
 
     // Verificar si hay reservas que se solapan con las fechas solicitadas
@@ -213,39 +220,40 @@ app.post("/reservar", async (req, res) => {
          (fecha_inicio <= $3 AND fecha_fin >= $3) OR
          (fecha_inicio >= $2 AND fecha_fin <= $3)
        )`,
-      [habitacion_id, fecha_inicio, fecha_fin]
-    );
+      [habitacion_id, fecha_inicio, fecha_fin],
+    )
 
     if (reservasExistentes.rows.length > 0) {
-      console.error("Habitación no disponible para las fechas seleccionadas");
-      return res.status(400).json({ 
-        success: false, 
-        message: "La habitación seleccionada no está disponible para las fechas indicadas. Por favor, seleccione otras fechas o tipo de habitación." 
-      });
+      console.error("Habitación no disponible para las fechas seleccionadas")
+      return res.status(400).json({
+        success: false,
+        message:
+          "La habitación seleccionada no está disponible para las fechas indicadas. Por favor, seleccione otras fechas o tipo de habitación.",
+      })
     }
 
     // Crear la reserva
-    console.log("Creando reserva con usuario_id:", userId, "habitacion_id:", habitacion_id);
+    console.log("Creando reserva con usuario_id:", userId, "habitacion_id:", habitacion_id)
     const reservaResult = await pool.query(
       "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-      [userId, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente"]
-    );
+      [userId, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente"],
+    )
 
-    const reservaId = reservaResult.rows[0].id;
-    console.log("Reserva creada con ID:", reservaId);
+    const reservaId = reservaResult.rows[0].id
+    console.log("Reserva creada con ID:", reservaId)
 
     res.status(200).json({
       success: true,
       message: "Reserva creada con éxito",
       reserva_id: reservaId,
-    });
+    })
   } catch (error) {
-    console.error("Error detallado al crear reserva:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Error al procesar la reserva", 
-      error: error.message 
-    });
+    console.error("Error detallado al crear reserva:", error)
+    res.status(500).json({
+      success: false,
+      message: "Error al procesar la reserva",
+      error: error.message,
+    })
   }
 })
 
@@ -375,6 +383,193 @@ app.get("/init-habitaciones", async (req, res) => {
   } catch (error) {
     console.error("Error al inicializar habitaciones:", error)
     res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
+  }
+})
+
+// ==========================================
+// NUEVAS RUTAS DE ADMINISTRACIÓN
+// ==========================================
+
+// Middleware para verificar si el usuario es administrador
+const verificarAdmin = async (req, res, next) => {
+  try {
+    const { correo } = req.body
+
+    // Lista de correos de administradores (puedes moverlo a la base de datos)
+    const adminEmails = ["admin@hotelituss.com", "gerente@hotelituss.com"]
+
+    if (!adminEmails.includes(correo)) {
+      return res.status(403).json({ success: false, message: "Acceso denegado. No tienes permisos de administrador." })
+    }
+
+    next()
+  } catch (error) {
+    console.error("Error en verificación de admin:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+}
+
+// Ruta para login de administrador
+app.post("/admin-login", async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Faltan credenciales" })
+    }
+
+    // Verificar credenciales de administrador
+    const adminCredentials = {
+      "admin@hotelituss.com": "admin123",
+      "gerente@hotelituss.com": "gerente123",
+    }
+
+    if (adminCredentials[email] && adminCredentials[email] === password) {
+      return res.status(200).json({
+        success: true,
+        message: "Login de administrador exitoso",
+        isAdmin: true,
+        user: {
+          correo: email,
+          nombre: email === "admin@hotelituss.com" ? "Administrador" : "Gerente",
+          rol: "admin",
+        },
+      })
+    }
+
+    // Si no es admin, verificar como usuario normal
+    const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: "Credenciales incorrectas" })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Login exitoso",
+      isAdmin: false,
+      user: {
+        id: result.rows[0].id,
+        nombre: result.rows[0].nombre,
+        correo: result.rows[0].correo,
+        rol: "user",
+      },
+    })
+  } catch (error) {
+    console.error("Error en admin login:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Ruta para obtener todas las reservas (solo admin)
+app.post("/admin/reservas", verificarAdmin, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        r.id,
+        r.fecha_inicio,
+        r.fecha_fin,
+        r.estado,
+        u.nombre as usuario_nombre,
+        u.correo as usuario_correo,
+        u.telefono as usuario_telefono,
+        h.tipo as habitacion_tipo,
+        h.numero as habitacion_numero,
+        h.precio_por_noche
+      FROM reservas r
+      JOIN usuarios u ON r.usuario_id = u.id
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      ORDER BY r.fecha_inicio DESC
+    `
+
+    const result = await pool.query(query)
+
+    res.status(200).json({
+      success: true,
+      reservas: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener reservas para admin:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Ruta para obtener todos los usuarios/huéspedes (solo admin)
+app.post("/admin/usuarios", verificarAdmin, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id,
+        u.nombre,
+        u.correo,
+        u.telefono,
+        COUNT(r.id) as total_reservas,
+        MAX(r.fecha_inicio) as ultima_reserva
+      FROM usuarios u
+      LEFT JOIN reservas r ON u.id = r.usuario_id
+      GROUP BY u.id, u.nombre, u.correo, u.telefono
+      ORDER BY u.nombre ASC
+    `
+
+    const result = await pool.query(query)
+
+    res.status(200).json({
+      success: true,
+      usuarios: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener usuarios para admin:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Ruta para obtener estadísticas del dashboard (solo admin)
+app.post("/admin/estadisticas", verificarAdmin, async (req, res) => {
+  try {
+    // Obtener estadísticas
+    const totalUsuarios = await pool.query("SELECT COUNT(*) as total FROM usuarios")
+    const totalReservas = await pool.query("SELECT COUNT(*) as total FROM reservas")
+    const reservasActivas = await pool.query(
+      "SELECT COUNT(*) as total FROM reservas WHERE estado = 'confirmada' OR estado = 'pendiente'",
+    )
+    const ingresosMes = await pool.query(`
+      SELECT COALESCE(SUM(h.precio_por_noche * (r.fecha_fin::date - r.fecha_inicio::date)), 0) as total
+      FROM reservas r
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      WHERE r.estado = 'confirmada' 
+      AND EXTRACT(MONTH FROM r.fecha_inicio) = EXTRACT(MONTH FROM CURRENT_DATE)
+      AND EXTRACT(YEAR FROM r.fecha_inicio) = EXTRACT(YEAR FROM CURRENT_DATE)
+    `)
+
+    res.status(200).json({
+      success: true,
+      estadisticas: {
+        totalUsuarios: Number.parseInt(totalUsuarios.rows[0].total),
+        totalReservas: Number.parseInt(totalReservas.rows[0].total),
+        reservasActivas: Number.parseInt(reservasActivas.rows[0].total),
+        ingresosMes: Number.parseFloat(ingresosMes.rows[0].total) || 0,
+      },
+    })
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Ruta para actualizar estado de reserva (solo admin)
+app.post("/admin/actualizar-reserva", verificarAdmin, async (req, res) => {
+  try {
+    const { reservaId, nuevoEstado } = req.body
+
+    await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevoEstado, reservaId])
+
+    res.status(200).json({
+      success: true,
+      message: "Estado de reserva actualizado correctamente",
+    })
+  } catch (error) {
+    console.error("Error al actualizar reserva:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
   }
 })
 
