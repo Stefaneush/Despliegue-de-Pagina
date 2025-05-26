@@ -159,29 +159,39 @@ app.post("/sesion", async (req, res) => {
   }
 })
 
-// Función para calcular el precio total de la reserva en PESOS ARGENTINOS
-function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
-  // Precios por noche en PESOS ARGENTINOS
-  const precios = {
-    1: 25000, // individual - $25,000 ARS por noche
-    2: 35000, // doble - $35,000 ARS por noche
-    3: 50000, // suite - $50,000 ARS por noche
+// Función para calcular el precio total de la reserva usando precios de la base de datos
+async function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
+  try {
+    // Obtener el precio real de la base de datos
+    const habitacionResult = await pool.query("SELECT precio_por_noche, tipo FROM habitaciones WHERE id = $1", [
+      habitacion_id,
+    ])
+
+    if (habitacionResult.rows.length === 0) {
+      console.error("Habitación no encontrada para cálculo de precio")
+      return 0
+    }
+
+    const precioPorNoche = habitacionResult.rows[0].precio_por_noche
+    const tipoHabitacion = habitacionResult.rows[0].tipo
+
+    const fechaInicio = new Date(fecha_inicio)
+    const fechaFin = new Date(fecha_fin)
+    const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
+
+    const precioTotal = noches * precioPorNoche
+
+    console.log(`Cálculo de precio:`)
+    console.log(`- Habitación: ${tipoHabitacion} (ID: ${habitacion_id})`)
+    console.log(`- Precio por noche: $${precioPorNoche} ARS`)
+    console.log(`- Número de noches: ${noches}`)
+    console.log(`- Precio total: $${precioTotal} ARS`)
+
+    return precioTotal
+  } catch (error) {
+    console.error("Error al calcular precio:", error)
+    return 0
   }
-
-  const fechaInicio = new Date(fecha_inicio)
-  const fechaFin = new Date(fecha_fin)
-  const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
-  const precioPorNoche = precios[habitacion_id] || 25000
-
-  const precioTotal = noches * precioPorNoche
-
-  console.log(`Cálculo de precio:`)
-  console.log(`- Habitación ID: ${habitacion_id}`)
-  console.log(`- Precio por noche: $${precioPorNoche.toLocaleString("es-AR")} ARS`)
-  console.log(`- Número de noches: ${noches}`)
-  console.log(`- Precio total: $${precioTotal.toLocaleString("es-AR")} ARS`)
-
-  return precioTotal
 }
 
 // Ruta para realizar reservas - MODIFICADA PARA MERCADOPAGO
@@ -278,8 +288,12 @@ app.post("/reservar", async (req, res) => {
     const reservaId = reservaResult.rows[0].id
     console.log("Reserva creada con ID:", reservaId)
 
-    // Calcular el precio total en PESOS ARGENTINOS
-    const precioTotal = calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin)
+    // Calcular el precio total usando los precios reales de la base de datos
+    const precioTotal = await calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin)
+
+    if (precioTotal === 0) {
+      return res.status(400).json({ success: false, message: "Error al calcular el precio de la reserva" })
+    }
 
     // Crear preferencia de MercadoPago
     const preference = new Preference(client)
@@ -296,7 +310,7 @@ app.post("/reservar", async (req, res) => {
           title: `Reserva ${tiposHabitacion[habitacion_id]} - Hotelituss`,
           description: `Reserva del ${fecha_inicio} al ${fecha_fin}`,
           quantity: 1,
-          currency_id: "ARS", // Cambiado a PESOS ARGENTINOS
+          currency_id: "ARS", // PESOS ARGENTINOS
           unit_price: precioTotal,
         },
       ],
@@ -330,7 +344,7 @@ app.post("/reservar", async (req, res) => {
       payment_url: result.init_point, // URL para redirigir al usuario a MercadoPago
       preference_id: result.id,
       precio_total: precioTotal,
-      precio_formateado: `$${precioTotal.toLocaleString("es-AR")} ARS`,
+      precio_formateado: `$${precioTotal} ARS`,
     })
   } catch (error) {
     console.error("Error detallado al crear reserva:", error)
@@ -491,33 +505,20 @@ app.post("/get-user-data", async (req, res) => {
   }
 })
 
-// Inicializar habitaciones si no existen
+// Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
 app.get("/init-habitaciones", async (req, res) => {
   try {
-    // Verificar si ya existen habitaciones
-    const checkResult = await pool.query("SELECT COUNT(*) FROM habitaciones")
+    // Verificar habitaciones existentes
+    const checkResult = await pool.query("SELECT * FROM habitaciones ORDER BY id")
 
-    if (Number.parseInt(checkResult.rows[0].count) > 0) {
-      return res.status(200).json({ message: "Las habitaciones ya están inicializadas" })
-    }
-
-    // Crear habitaciones iniciales con precios en PESOS ARGENTINOS
-    await pool.query(`
-      INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES
-      ('individual', 101, 25000, true),
-      ('individual', 102, 25000, true),
-      ('individual', 103, 25000, true),
-      ('doble', 201, 35000, true),
-      ('doble', 202, 35000, true),
-      ('doble', 203, 35000, true),
-      ('suite', 301, 50000, true),
-      ('suite', 302, 50000, true)
-    `)
-
-    res.status(200).json({ success: true, message: "Habitaciones inicializadas correctamente con precios en ARS" })
+    res.status(200).json({
+      success: true,
+      message: "Habitaciones existentes en la base de datos",
+      habitaciones: checkResult.rows,
+    })
   } catch (error) {
-    console.error("Error al inicializar habitaciones:", error)
-    res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
+    console.error("Error al consultar habitaciones:", error)
+    res.status(500).json({ success: false, message: "Error al consultar habitaciones" })
   }
 })
 
@@ -528,6 +529,7 @@ app.get("/status", (req, res) => {
     message: "Servidor funcionando correctamente",
     mercadopago: "configurado",
     currency: "ARS",
+    precios_desde_db: true,
     timestamp: new Date().toISOString(),
   })
 })
@@ -540,4 +542,4 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
-console.log("💰 Precios configurados en PESOS ARGENTINOS (ARS)")
+console.log("💰 Precios obtenidos directamente de la base de datos")
