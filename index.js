@@ -627,3 +627,7 @@ console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 085e4d987be2747a5576579a498bf5c2e6d86da6
