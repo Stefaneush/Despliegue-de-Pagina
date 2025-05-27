@@ -62,9 +62,15 @@ app.post("/create", async (req, res) => {
     // Validaciones de entrada
     if (!nombre || !correo || !telefono || !password) {
       console.log("❌ Faltan campos obligatorios")
+      console.log("Campos recibidos:", { 
+        nombre: !!nombre, 
+        correo: !!correo, 
+        telefono: !!telefono, 
+        password: !!password 
+      })
       return res.status(400).json({ 
         success: false, 
-        message: "Todos los campos son obligatorios" 
+        message: "Todos los campos son obligatorios (nombre, correo, telefono, password)" 
       })
     }
 
@@ -718,17 +724,17 @@ app.get("/init-habitaciones", async (req, res) => {
   }
 })
 
-// Ruta de prueba para envío de emails
+// Ruta de prueba para envío de emails - USANDO CAMPO CORREO
 app.post("/test-email", async (req, res) => {
   try {
-    const { email } = req.body
+    const { correo } = req.body
     
-    if (!email) {
-      return res.status(400).json({ success: false, message: "Email requerido" })
+    if (!correo) {
+      return res.status(400).json({ success: false, message: "Correo requerido" })
     }
 
     console.log("=== PRUEBA DE EMAIL ===")
-    console.log("Email destino:", email)
+    console.log("Correo destino:", correo)
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -743,7 +749,7 @@ app.post("/test-email", async (req, res) => {
 
     const mailOptions = {
       from: '"Hotelitus Test" <infohotelituss@gmail.com>',
-      to: email,
+      to: correo,
       subject: "Prueba de envío de email",
       html: `
         <h2>Prueba exitosa</h2>
@@ -781,6 +787,7 @@ app.get("/status", (req, res) => {
     precios_desde_db: true,
     tabla_pagos: "habilitada",
     email_system: "corregido",
+    campo_email: "correo",
     timestamp: new Date().toISOString(),
   })
 })
@@ -793,4 +800,4 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
-console.log("📧 Sistema de emails corregido y validado")
+console.log("📧 Sistema de emails corregido usando campo 'correo'")
