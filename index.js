@@ -48,7 +48,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
