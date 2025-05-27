@@ -51,68 +51,130 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario
+//Crear usuario - AQUÍ ESTÁ EL PROBLEMA PRINCIPAL
 app.post("/create", async (req, res) => {
-  const { nombre, correo, telefono, password } = req.body
+  try {
+    const { nombre, correo, telefono, password } = req.body
 
-  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
+    console.log("📧 Iniciando proceso de creación de usuario:", { nombre, correo, telefono })
 
-  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
+    // Validar datos de entrada
+    if (!nombre || !correo || !telefono || !password) {
+      console.error("❌ Faltan datos requeridos")
+      return res.status(400).json({
+        success: false,
+        message: "Todos los campos son requeridos",
+      })
+    }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "infohotelituss@gmail.com",
-      pass: "pgfn jkao huuk czog",
-    },
-  })
+    // Verificar si el usuario ya existe
+    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+    if (existingUser.rows.length > 0) {
+      console.error("❌ Usuario ya existe:", correo)
+      return res.status(400).json({
+        success: false,
+        message: "Ya existe un usuario con este correo electrónico",
+      })
+    }
 
-  const mailOptions = {
-    from: '"Hotelitus" <infohotelituss@gmail.com>',
-    to: correo,
-    subject: "Código de verificación - Hotelitus",
-    html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Tu código de verificación es:</p>
-            <h3>${codigo}</h3>
-            <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `,
+    const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
+    console.log("🔢 Código generado:", codigo)
+
+    usuariosPendientes[correo] = { codigo, nombre, telefono, password }
+    console.log("💾 Usuario guardado en pendientes")
+
+    // Configuración mejorada de nodemailer
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "infohotelituss@gmail.com",
+        pass: "pgfn jkao huuk czog", // Considera usar variables de entorno
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    })
+
+    const mailOptions = {
+      from: '"Hotelituss" <infohotelituss@gmail.com>',
+      to: correo,
+      subject: "Código de verificación - Hotelituss",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #c8a97e;">Hola ${nombre} 👋</h2>
+          <p>Gracias por registrarte en Hotelituss. Tu código de verificación es:</p>
+          <div style="background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #c8a97e; font-size: 32px; margin: 0;">${codigo}</h1>
+          </div>
+          <p>Ingresa este código en el sitio web para completar tu registro.</p>
+          <p style="color: #6c757d; font-size: 14px;">Este código expira en 10 minutos.</p>
+        </div>
+      `,
+    }
+
+    console.log("📤 Enviando email...")
+    await transporter.sendMail(mailOptions)
+    console.log("✅ Email enviado exitosamente")
+
+    // Respondemos al frontend para mostrar el modal
+    res.json({ success: true, message: "Código de verificación enviado" })
+  } catch (error) {
+    console.error("❌ Error en /create:", error)
+    res.status(500).json({
+      success: false,
+      message: "Error al enviar el código de verificación. Por favor, inténtelo de nuevo.",
+    })
   }
-
-  await transporter.sendMail(mailOptions)
-
-  // Respondemos al frontend para mostrar el modal
-  res.json({ success: true })
 })
 
-//Verificar codigo
+//Verificar codigo - MEJORADO
 app.post("/verify-code", async (req, res) => {
-  const { correo, codigo } = req.body
+  try {
+    const { correo, codigo } = req.body
 
-  const usuarioPendiente = usuariosPendientes[correo]
+    console.log("🔍 Verificando código para:", correo)
 
-  if (!usuarioPendiente) {
-    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
+    const usuarioPendiente = usuariosPendientes[correo]
+
+    if (!usuarioPendiente) {
+      console.error("❌ Usuario no encontrado en pendientes")
+      return res.status(400).json({
+        success: false,
+        message: "Usuario no encontrado o código expirado.",
+      })
+    }
+
+    if (usuarioPendiente.codigo !== codigo) {
+      console.error("❌ Código incorrecto")
+      return res.status(401).json({
+        success: false,
+        message: "Código incorrecto.",
+      })
+    }
+
+    // Código correcto, insertamos en la DB
+    const { nombre, telefono, password } = usuarioPendiente
+
+    console.log("💾 Insertando usuario en base de datos")
+    await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
+      nombre,
+      correo,
+      telefono,
+      password,
+    ])
+
+    // Eliminamos de la lista temporal
+    delete usuariosPendientes[correo]
+    console.log("✅ Usuario creado exitosamente")
+
+    res.json({ success: true, message: "Usuario creado exitosamente" })
+  } catch (error) {
+    console.error("❌ Error en /verify-code:", error)
+    res.status(500).json({
+      success: false,
+      message: "Error al verificar el código",
+    })
   }
-
-  if (usuarioPendiente.codigo !== codigo) {
-    return res.status(401).json({ success: false, message: "Código incorrecto." })
-  }
-
-  // Código correcto, insertamos en la DB
-  const { nombre, telefono, password } = usuarioPendiente
-
-  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
-    nombre,
-    correo,
-    telefono,
-    password,
-  ])
-
-  // Eliminamos de la lista temporal
-  delete usuariosPendientes[correo]
-
-  res.json({ success: true })
 })
 
 //iniciar sesion
@@ -622,6 +684,8 @@ pool
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
-app.listen(3000)
-console.log("🚀 Servidor iniciado en puerto 3000")
-console.log("💳 MercadoPago configurado con Access Token de prueba")
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor iniciado en puerto ${PORT}`)
+  console.log("💳 MercadoPago configurado con Access Token de prueba")
+})

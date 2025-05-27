@@ -17,8 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupMyReservations()
   setupDateConstraints()
   setupLoginForm()
-  handlePaymentReturn()
-  setupAdminPanel()
+  handlePaymentReturn() // Nueva función para manejar el retorno de MercadoPago
 
   const misReservasLink = document.getElementById("myReservationsLink")
   if (misReservasLink) {
@@ -33,314 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 })
-
-// Función para configurar el panel de administración
-function setupAdminPanel() {
-  const urlParams = new URLSearchParams(window.location.search)
-  const isAdmin = urlParams.get("admin") === "true"
-  const isLoggedIn = urlParams.get("logged") === "true"
-
-  if (isAdmin && isLoggedIn) {
-    localStorage.setItem("userLoggedIn", "true")
-    localStorage.setItem("isAdmin", "true")
-    showAdminPanel()
-  }
-
-  // Verificar si ya es admin desde localStorage
-  if (localStorage.getItem("isAdmin") === "true") {
-    showAdminPanel()
-  }
-}
-
-function showAdminPanel() {
-  // Ocultar todas las secciones normales
-  const sectionsToHide = [
-    'header#inicio',
-    '#bienvenida',
-    '#habitaciones', 
-    '#servicios',
-    '#reservas',
-    '#opiniones',
-    '#ubicacion',
-    '#contacto'
-  ]
-
-  sectionsToHide.forEach(selector => {
-    const element = document.querySelector(selector)
-    if (element) {
-      element.style.display = 'none'
-    }
-  })
-
-  // Mostrar solo el panel de administración
-  const adminPanel = document.getElementById('admin-panel')
-  if (adminPanel) {
-    adminPanel.style.display = 'block'
-    
-    // Cargar datos del panel de administración
-    cargarEstadisticasAdmin()
-    cargarReservasAdmin()
-    cargarUsuariosAdmin()
-  }
-
-  // Actualizar navbar para admin
-  updateNavbarForAdmin()
-}
-
-function updateNavbarForAdmin() {
-  const navbarNav = document.querySelector('.navbar-nav')
-  if (navbarNav) {
-    // Limpiar navegación existente
-    const navItems = navbarNav.querySelectorAll('.nav-item:not(#userProfileDropdown)')
-    navItems.forEach(item => {
-      if (!item.querySelector('#userProfileDropdown')) {
-        item.style.display = 'none'
-      }
-    })
-
-    // Agregar elementos de navegación para admin
-    const adminNavItems = `
-      <li class="nav-item">
-        <a class="nav-link active" href="#admin-panel">Panel de Control</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#" onclick="location.reload()">Recargar Datos</a>
-      </li>
-    `
-
-    // Insertar antes del dropdown de usuario
-    const userDropdown = document.getElementById('userProfileDropdown')
-    if (userDropdown) {
-      userDropdown.insertAdjacentHTML('beforebegin', adminNavItems)
-    }
-  }
-}
-
-// Función para cargar estadísticas del dashboard
-function cargarEstadisticasAdmin() {
-  const userEmail = localStorage.getItem("currentUserEmail") || localStorage.getItem("usuarioLogueado")
-  
-  if (!userEmail) return
-
-  fetch("https://hotelitus.onrender.com/admin/estadisticas", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ correo: userEmail }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const stats = data.estadisticas
-        
-        // Actualizar las tarjetas de estadísticas
-        document.getElementById('totalUsuarios').textContent = stats.totalUsuarios
-        document.getElementById('totalReservas').textContent = stats.totalReservas
-        document.getElementById('reservasActivas').textContent = stats.reservasActivas
-        document.getElementById('ingresosMes').textContent = `$${stats.ingresosMes.toFixed(2)}`
-      }
-    })
-    .catch(error => {
-      console.error("Error al cargar estadísticas:", error)
-    })
-}
-
-// Función para cargar todas las reservas (admin)
-function cargarReservasAdmin() {
-  const userEmail = localStorage.getItem("currentUserEmail") || localStorage.getItem("usuarioLogueado")
-  
-  if (!userEmail) return
-
-  const loadingElement = document.getElementById('reservasAdminLoading')
-  const contentElement = document.getElementById('reservasAdminContent')
-  const tableBody = document.getElementById('reservasAdminTableBody')
-
-  if (loadingElement) loadingElement.style.display = 'block'
-  if (contentElement) contentElement.style.display = 'none'
-
-  fetch("https://hotelitus.onrender.com/admin/reservas", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ correo: userEmail }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (loadingElement) loadingElement.style.display = 'none'
-      
-      if (data.success && tableBody) {
-        tableBody.innerHTML = ''
-        
-        data.reservas.forEach(reserva => {
-          const fechaInicio = new Date(reserva.fecha_inicio).toLocaleDateString()
-          const fechaFin = new Date(reserva.fecha_fin).toLocaleDateString()
-          const fechaReserva = new Date(reserva.fecha_reserva).toLocaleDateString()
-          
-          const total = (reserva.precio_por_noche * 
-            Math.ceil((new Date(reserva.fecha_fin) - new Date(reserva.fecha_inicio)) / (1000 * 60 * 60 * 24)))
-          
-          let estadoBadge = ''
-          switch(reserva.estado) {
-            case 'confirmada':
-              estadoBadge = '<span class="badge bg-success">Confirmada</span>'
-              break
-            case 'pendiente':
-              estadoBadge = '<span class="badge bg-warning">Pendiente</span>'
-              break
-            case 'pendiente_pago':
-              estadoBadge = '<span class="badge bg-info">Pendiente Pago</span>'
-              break
-            case 'cancelada':
-              estadoBadge = '<span class="badge bg-danger">Cancelada</span>'
-              break
-            default:
-              estadoBadge = '<span class="badge bg-secondary">Desconocido</span>'
-          }
-
-          const row = document.createElement('tr')
-          row.innerHTML = `
-            <td>${reserva.id}</td>
-            <td>${reserva.usuario_nombre}</td>
-            <td>
-              <small>${reserva.usuario_correo}</small><br>
-              <small class="text-muted">${reserva.usuario_telefono || 'N/A'}</small>
-            </td>
-            <td>${reserva.habitacion_tipo} ${reserva.habitacion_numero}</td>
-            <td>${fechaInicio}</td>
-            <td>${fechaFin}</td>
-            <td>${estadoBadge}</td>
-            <td>$${total.toFixed(2)}</td>
-            <td>
-              <div class="btn-group btn-group-sm" role="group">
-                ${reserva.estado !== 'confirmada' ? 
-                  `<button class="btn btn-outline-success" onclick="actualizarEstadoReserva(${reserva.id}, 'confirmada')">
-                    <i class="fas fa-check"></i>
-                  </button>` : ''
-                }
-                ${reserva.estado !== 'cancelada' ? 
-                  `<button class="btn btn-outline-danger" onclick="actualizarEstadoReserva(${reserva.id}, 'cancelada')">
-                    <i class="fas fa-times"></i>
-                  </button>` : ''
-                }
-              </div>
-            </td>
-          `
-          tableBody.appendChild(row)
-        })
-        
-        if (contentElement) contentElement.style.display = 'block'
-      }
-    })
-    .catch(error => {
-      console.error("Error al cargar reservas:", error)
-      if (loadingElement) loadingElement.style.display = 'none'
-    })
-}
-
-// Función para cargar todos los huéspedes (admin)
-function cargarUsuariosAdmin() {
-  const userEmail = localStorage.getItem("currentUserEmail") || localStorage.getItem("usuarioLogueado")
-  
-  if (!userEmail) return
-
-  const loadingElement = document.getElementById('usuariosAdminLoading')
-  const contentElement = document.getElementById('usuariosAdminContent')
-  const tableBody = document.getElementById('usuariosAdminTableBody')
-
-  if (loadingElement) loadingElement.style.display = 'block'
-  if (contentElement) contentElement.style.display = 'none'
-
-  fetch("https://hotelitus.onrender.com/admin/huespedes", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ correo: userEmail }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (loadingElement) loadingElement.style.display = 'none'
-      
-      if (data.success && tableBody) {
-        tableBody.innerHTML = ''
-        
-        data.huespedes.forEach(huesped => {
-          const fechaRegistro = new Date(huesped.fecha_registro).toLocaleDateString()
-          const ultimaReserva = huesped.ultima_reserva ? 
-            new Date(huesped.ultima_reserva).toLocaleDateString() : 'Nunca'
-          
-          let estadoBadge = ''
-          switch(huesped.estado) {
-            case 'Activo':
-              estadoBadge = '<span class="badge bg-success">Activo</span>'
-              break
-            case 'Nuevo':
-              estadoBadge = '<span class="badge bg-info">Nuevo</span>'
-              break
-            default:
-              estadoBadge = '<span class="badge bg-secondary">Inactivo</span>'
-          }
-
-          const row = document.createElement('tr')
-          row.innerHTML = `
-            <td>${huesped.id}</td>
-            <td>${huesped.nombre}</td>
-            <td>${huesped.correo}</td>
-            <td>${huesped.telefono || 'N/A'}</td>
-            <td>${huesped.total_reservas}</td>
-            <td>${ultimaReserva}</td>
-            <td>${estadoBadge}</td>
-          `
-          tableBody.appendChild(row)
-        })
-        
-        if (contentElement) contentElement.style.display = 'block'
-      }
-    })
-    .catch(error => {
-      console.error("Error al cargar huéspedes:", error)
-      if (loadingElement) loadingElement.style.display = 'none'
-    })
-}
-
-// Función para actualizar estado de reserva
-function actualizarEstadoReserva(reservaId, nuevoEstado) {
-  const userEmail = localStorage.getItem("currentUserEmail") || localStorage.getItem("usuarioLogueado")
-  
-  if (!userEmail) return
-
-  if (!confirm(`¿Está seguro de cambiar el estado de la reserva a "${nuevoEstado}"?`)) {
-    return
-  }
-
-  fetch("https://hotelitus.onrender.com/admin/actualizar-reserva", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ 
-      correo: userEmail,
-      reserva_id: reservaId,
-      nuevo_estado: nuevoEstado
-    }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert("Estado de reserva actualizado correctamente")
-        cargarReservasAdmin() // Recargar la tabla
-        cargarEstadisticasAdmin() // Actualizar estadísticas
-      } else {
-        alert("Error al actualizar el estado: " + data.message)
-      }
-    })
-    .catch(error => {
-      console.error("Error al actualizar reserva:", error)
-      alert("Error al actualizar el estado de la reserva")
-    })
-}
 
 // Nueva función para manejar el retorno de MercadoPago
 function handlePaymentReturn() {
@@ -583,6 +274,7 @@ function setupModals() {
   }
 }
 
+// Función mejorada para validación de formulario
 function setupFormValidation() {
   const forms = document.querySelectorAll(".needs-validation")
   Array.from(forms).forEach((form) => {
@@ -604,15 +296,36 @@ function setupFormValidation() {
     createUserForm.addEventListener("submit", function (event) {
       event.preventDefault()
 
+      console.log("📝 Formulario enviado")
+
+      // Limpiar errores previos
+      const errorElements = this.querySelectorAll(".is-invalid")
+      errorElements.forEach((el) => el.classList.remove("is-invalid"))
+
       if (this.checkValidity()) {
         const formData = {
-          nombre: document.getElementById("userName").value,
-          correo: document.getElementById("userEmail").value,
-          telefono: document.getElementById("userTelefono").value,
+          nombre: document.getElementById("userName").value.trim(),
+          correo: document.getElementById("userEmail").value.trim(),
+          telefono: document.getElementById("userTelefono").value.trim(),
           password: document.getElementById("userPassword").value,
         }
 
+        console.log("📊 Datos del formulario:", formData)
+
+        // Validaciones adicionales
+        if (!formData.nombre || !formData.correo || !formData.telefono || !formData.password) {
+          alert("Por favor, complete todos los campos")
+          return
+        }
+
+        if (formData.password.length < 6) {
+          alert("La contraseña debe tener al menos 6 caracteres")
+          return
+        }
+
         sendVerificationCode(formData)
+      } else {
+        console.log("❌ Formulario inválido")
       }
 
       this.classList.add("was-validated")
@@ -661,11 +374,6 @@ function setupLoginForm() {
             localStorage.setItem("userLoggedIn", "true")
             localStorage.setItem("usuarioLogueado", email)
             localStorage.setItem("currentUserEmail", email)
-            
-            // Verificar si es administrador
-            if (data.isAdmin) {
-              localStorage.setItem("isAdmin", "true")
-            }
 
             const bootstrap = window.bootstrap
             if (bootstrap) {
@@ -675,12 +383,7 @@ function setupLoginForm() {
               }
             }
 
-            // Redirigir según el tipo de usuario
-            if (data.isAdmin) {
-              showAdminPanel()
-            } else {
-              window.location.reload()
-            }
+            window.location.reload()
           } else {
             errorMsg.textContent = data.message || "Credenciales incorrectas"
             errorMsg.classList.remove("d-none")
@@ -799,7 +502,7 @@ function setupReservationForm() {
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...'
       submitBtn.disabled = true
 
-      // Crear la reserva
+      // Crear la reserva y obtener la URL de pago
       fetch("https://hotelitus.onrender.com/reservar", {
         method: "POST",
         headers: {
@@ -821,10 +524,15 @@ function setupReservationForm() {
           submitBtn.innerHTML = originalBtnText
           submitBtn.disabled = false
 
-          showReservationMessage("¡Reserva creada exitosamente! Recibirá un correo de confirmación.", "success")
-          
-          // Limpiar el formulario
-          reservationForm.reset()
+          if (result.payment_url) {
+            // Redirigir al usuario a MercadoPago
+            showReservationMessage("Redirigiendo a la pasarela de pago...", "info")
+            setTimeout(() => {
+              window.location.href = result.payment_url
+            }, 2000)
+          } else {
+            showReservationMessage("Error: No se pudo generar el enlace de pago", "danger")
+          }
         })
         .catch((error) => {
           console.error("Error detallado al crear reserva:", error)
@@ -1242,7 +950,6 @@ function setupUserSession() {
 
   const urlParams = new URLSearchParams(window.location.search)
   const loggedIn = urlParams.get("logged")
-  const isAdmin = urlParams.get("admin")
 
   if (loggedIn === "true") {
     localStorage.setItem("userLoggedIn", "true")
@@ -1250,26 +957,16 @@ function setupUserSession() {
     if (userEmail) {
       localStorage.setItem("currentUserEmail", userEmail)
     }
-    
-    if (isAdmin === "true") {
-      localStorage.setItem("isAdmin", "true")
-    }
-    
     window.history.replaceState({}, document.title, "/")
   }
 
   const isLogged = localStorage.getItem("userLoggedIn") === "true"
-  const isAdminUser = localStorage.getItem("isAdmin") === "true"
 
   if (isLogged) {
     if (loginLink) loginLink.style.display = "none"
     if (createUserLink) createUserLink.style.display = "none"
     if (userProfileDropdown) userProfileDropdown.style.display = "block"
     loadUserData()
-    
-    if (isAdminUser) {
-      showAdminPanel()
-    }
   } else {
     if (loginLink) loginLink.style.display = "block"
     if (createUserLink) createUserLink.style.display = "block"
@@ -1283,7 +980,6 @@ function setupUserSession() {
       localStorage.removeItem("userLoggedIn")
       localStorage.removeItem("currentUserEmail")
       localStorage.removeItem("currentUserData")
-      localStorage.removeItem("isAdmin")
       window.location.reload()
     })
   }
@@ -1438,11 +1134,20 @@ function setupVerificationCode() {
   }
 }
 
+// Función mejorada para enviar código de verificación
 function sendVerificationCode(userData) {
   const backendBaseUrl = "https://hotelitus.onrender.com"
 
+  console.log("📤 Enviando datos de usuario:", userData)
+
   localStorage.setItem("pendingUserData", JSON.stringify(userData))
   localStorage.setItem("pendingVerificationEmail", userData.correo)
+
+  // Mostrar indicador de carga
+  const submitBtn = document.querySelector('#createUserForm button[type="submit"]')
+  const originalBtnText = submitBtn.innerHTML
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando código...'
+  submitBtn.disabled = true
 
   fetch(`${backendBaseUrl}/create`, {
     method: "POST",
@@ -1451,9 +1156,20 @@ function sendVerificationCode(userData) {
     },
     body: JSON.stringify(userData),
   })
-    .then((response) => response.json())
+    .then((response) => {
+      console.log("📥 Respuesta del servidor:", response.status)
+      return response.json()
+    })
     .then((result) => {
+      console.log("📋 Resultado:", result)
+
+      // Restaurar botón
+      submitBtn.innerHTML = originalBtnText
+      submitBtn.disabled = false
+
       if (result.success) {
+        console.log("✅ Código enviado exitosamente")
+
         const bootstrap = window.bootstrap
         if (bootstrap) {
           const createUserModal = bootstrap.Modal.getInstance(document.getElementById("createUserModal"))
@@ -1468,12 +1184,18 @@ function sendVerificationCode(userData) {
           }, 500)
         }
       } else {
-        alert("Error al enviar el código de verificación. Por favor, inténtelo de nuevo.")
+        console.error("❌ Error del servidor:", result.message)
+        alert(result.message || "Error al enviar el código de verificación. Por favor, inténtelo de nuevo.")
       }
     })
     .catch((error) => {
-      console.error("Error al enviar datos:", error)
-      alert("Error al enviar el código de verificación. Por favor, inténtelo de nuevo.")
+      console.error("❌ Error de red:", error)
+
+      // Restaurar botón
+      submitBtn.innerHTML = originalBtnText
+      submitBtn.disabled = false
+
+      alert("Error de conexión. Por favor, verifique su conexión a internet e inténtelo de nuevo.")
     })
 }
 
