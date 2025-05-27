@@ -22,6 +22,25 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const usuariosPendientes = {}
 
+// Lista de administradores predefinidos (no necesitan estar en la BD)
+const ADMIN_ACCOUNTS = {
+  "admin@hotelituss.com": {
+    password: "admin123",
+    nombre: "Administrador Principal"
+  },
+  "gerente@hotelituss.com": {
+    password: "gerente123", 
+    nombre: "Gerente General"
+  },
+  "administrador@hotelituss.com": {
+    password: "admin456",
+    nombre: "Administrador del Sistema"
+  }
+}
+
+// Lista de emails de administradores
+const ADMIN_EMAILS = Object.keys(ADMIN_ACCOUNTS)
+
 // Configurar MercadoPago
 const client = new MercadoPagoConfig({
   accessToken: MERCADOPAGO_ACCESS_TOKEN,
@@ -51,133 +70,79 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario - AQUÍ ESTÁ EL PROBLEMA PRINCIPAL
+//Crear usuario
 app.post("/create", async (req, res) => {
-  try {
-    const { nombre, correo, telefono, password } = req.body
+  const { nombre, correo, telefono, password } = req.body
 
-    console.log("📧 Iniciando proceso de creación de usuario:", { nombre, correo, telefono })
-
-    // Validar datos de entrada
-    if (!nombre || !correo || !telefono || !password) {
-      console.error("❌ Faltan datos requeridos")
-      return res.status(400).json({
-        success: false,
-        message: "Todos los campos son requeridos",
-      })
-    }
-
-    // Verificar si el usuario ya existe
-    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
-    if (existingUser.rows.length > 0) {
-      console.error("❌ Usuario ya existe:", correo)
-      return res.status(400).json({
-        success: false,
-        message: "Ya existe un usuario con este correo electrónico",
-      })
-    }
-
-    const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
-    console.log("🔢 Código generado:", codigo)
-
-    usuariosPendientes[correo] = { codigo, nombre, telefono, password }
-    console.log("💾 Usuario guardado en pendientes")
-
-    // Configuración mejorada de nodemailer
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "infohotelituss@gmail.com",
-        pass: "pgfn jkao huuk czog", // Considera usar variables de entorno
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    })
-
-    const mailOptions = {
-      from: '"Hotelituss" <infohotelituss@gmail.com>',
-      to: correo,
-      subject: "Código de verificación - Hotelituss",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #c8a97e;">Hola ${nombre} 👋</h2>
-          <p>Gracias por registrarte en Hotelituss. Tu código de verificación es:</p>
-          <div style="background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #c8a97e; font-size: 32px; margin: 0;">${codigo}</h1>
-          </div>
-          <p>Ingresa este código en el sitio web para completar tu registro.</p>
-          <p style="color: #6c757d; font-size: 14px;">Este código expira en 10 minutos.</p>
-        </div>
-      `,
-    }
-
-    console.log("📤 Enviando email...")
-    await transporter.sendMail(mailOptions)
-    console.log("✅ Email enviado exitosamente")
-
-    // Respondemos al frontend para mostrar el modal
-    res.json({ success: true, message: "Código de verificación enviado" })
-  } catch (error) {
-    console.error("❌ Error en /create:", error)
-    res.status(500).json({
-      success: false,
-      message: "Error al enviar el código de verificación. Por favor, inténtelo de nuevo.",
+  // Verificar si es un email de administrador
+  if (ADMIN_EMAILS.includes(correo.toLowerCase())) {
+    return res.status(400).json({ 
+      success: false, 
+      message: "Este email está reservado para administradores. Use las credenciales de administrador para iniciar sesión directamente." 
     })
   }
+
+  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
+
+  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
+
+  const transporter = nodemailer.createTransporter({
+    service: "gmail",
+    auth: {
+      user: "infohotelituss@gmail.com",
+      pass: "pgfn jkao huuk czog",
+    },
+  })
+
+  const mailOptions = {
+    from: '"Hotelitus" <infohotelituss@gmail.com>',
+    to: correo,
+    subject: "Código de verificación - Hotelitus",
+    html: `
+            <h2>Hola ${nombre} 👋</h2>
+            <p>Tu código de verificación es:</p>
+            <h3>${codigo}</h3>
+            <p>Ingresa este código en el sitio para completar tu registro.</p>
+        `,
+  }
+
+  await transporter.sendMail(mailOptions)
+
+  // Respondemos al frontend para mostrar el modal
+  res.json({ success: true })
 })
 
-//Verificar codigo - MEJORADO
+//Verificar codigo
 app.post("/verify-code", async (req, res) => {
-  try {
-    const { correo, codigo } = req.body
+  const { correo, codigo } = req.body
 
-    console.log("🔍 Verificando código para:", correo)
+  const usuarioPendiente = usuariosPendientes[correo]
 
-    const usuarioPendiente = usuariosPendientes[correo]
-
-    if (!usuarioPendiente) {
-      console.error("❌ Usuario no encontrado en pendientes")
-      return res.status(400).json({
-        success: false,
-        message: "Usuario no encontrado o código expirado.",
-      })
-    }
-
-    if (usuarioPendiente.codigo !== codigo) {
-      console.error("❌ Código incorrecto")
-      return res.status(401).json({
-        success: false,
-        message: "Código incorrecto.",
-      })
-    }
-
-    // Código correcto, insertamos en la DB
-    const { nombre, telefono, password } = usuarioPendiente
-
-    console.log("💾 Insertando usuario en base de datos")
-    await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
-      nombre,
-      correo,
-      telefono,
-      password,
-    ])
-
-    // Eliminamos de la lista temporal
-    delete usuariosPendientes[correo]
-    console.log("✅ Usuario creado exitosamente")
-
-    res.json({ success: true, message: "Usuario creado exitosamente" })
-  } catch (error) {
-    console.error("❌ Error en /verify-code:", error)
-    res.status(500).json({
-      success: false,
-      message: "Error al verificar el código",
-    })
+  if (!usuarioPendiente) {
+    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
   }
+
+  if (usuarioPendiente.codigo !== codigo) {
+    return res.status(401).json({ success: false, message: "Código incorrecto." })
+  }
+
+  // Código correcto, insertamos en la DB
+  const { nombre, telefono, password } = usuarioPendiente
+
+  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
+    nombre,
+    correo,
+    telefono,
+    password,
+  ])
+
+  // Eliminamos de la lista temporal
+  delete usuariosPendientes[correo]
+
+  res.json({ success: true })
 })
 
-//iniciar sesion
+//iniciar sesion - MODIFICADO PARA SOPORTAR ADMINISTRADORES PREDEFINIDOS
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
   console.log("Headers:", req.headers)
@@ -192,6 +157,35 @@ app.post("/sesion", async (req, res) => {
 
     console.log(`Buscando usuario con email: ${email}`)
 
+    // Verificar si es un administrador predefinido
+    const adminAccount = ADMIN_ACCOUNTS[email.toLowerCase()]
+    if (adminAccount) {
+      if (adminAccount.password === password) {
+        console.log("Login de administrador exitoso")
+        
+        // Para solicitudes de formulario tradicionales
+        if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
+          return res.redirect("https://hotelituss1.vercel.app/?logged=true&admin=true")
+        }
+
+        // Para solicitudes JSON
+        return res.status(200).json({
+          success: true,
+          message: "Login de administrador exitoso",
+          user: {
+            id: 0, // ID especial para administradores
+            nombre: adminAccount.nombre,
+            correo: email,
+            isAdmin: true
+          },
+        })
+      } else {
+        console.log("Contraseña de administrador incorrecta")
+        return res.status(401).json({ message: "Credenciales de administrador incorrectas" })
+      }
+    }
+
+    // Si no es administrador, buscar en la base de datos de usuarios normales
     const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
 
     console.log("Resultado de búsqueda:", result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado")
@@ -213,6 +207,7 @@ app.post("/sesion", async (req, res) => {
         id: result.rows[0].id,
         nombre: result.rows[0].nombre,
         correo: result.rows[0].correo,
+        isAdmin: false
       },
     })
   } catch (error) {
@@ -649,6 +644,127 @@ app.post("/get-user-data", async (req, res) => {
   }
 })
 
+// ENDPOINTS PARA ADMINISTRACIÓN - MODIFICADOS PARA USAR ADMIN_EMAILS
+
+// Endpoint para obtener todas las reservas (solo administradores)
+app.post("/admin/reservas", async (req, res) => {
+  try {
+    const { admin_email } = req.body
+
+    // Verificar si es administrador
+    if (!ADMIN_EMAILS.includes(admin_email?.toLowerCase())) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        r.id,
+        r.fecha_inicio,
+        r.fecha_fin,
+        r.estado,
+        u.nombre as cliente_nombre,
+        u.correo as cliente_correo,
+        u.telefono as cliente_telefono,
+        h.tipo as habitacion_tipo,
+        h.precio_por_noche,
+        p.monto as monto_pagado,
+        p.fecha_pago
+      FROM reservas r
+      JOIN usuarios u ON r.usuario_id = u.id
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      LEFT JOIN pagos p ON r.id = p.reserva_id
+      ORDER BY r.fecha_inicio DESC
+    `)
+
+    res.status(200).json({
+      success: true,
+      reservas: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener reservas para admin:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las reservas" })
+  }
+})
+
+// Endpoint para obtener todos los huéspedes (solo administradores)
+app.post("/admin/huespedes", async (req, res) => {
+  try {
+    const { admin_email } = req.body
+
+    // Verificar si es administrador
+    if (!ADMIN_EMAILS.includes(admin_email?.toLowerCase())) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.nombre,
+        u.correo,
+        u.telefono,
+        COUNT(r.id) as total_reservas,
+        MAX(r.fecha_inicio) as ultima_reserva,
+        CASE 
+          WHEN COUNT(r.id) > 0 THEN 'Activo'
+          ELSE 'Inactivo'
+        END as estado
+      FROM usuarios u
+      LEFT JOIN reservas r ON u.id = r.usuario_id
+      GROUP BY u.id, u.nombre, u.correo, u.telefono
+      ORDER BY u.nombre ASC
+    `)
+
+    res.status(200).json({
+      success: true,
+      huespedes: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener huéspedes para admin:", error)
+    res.status(500).json({ success: false, message: "Error al obtener los huéspedes" })
+  }
+})
+
+// Endpoint para obtener estadísticas del dashboard (solo administradores)
+app.post("/admin/estadisticas", async (req, res) => {
+  try {
+    const { admin_email } = req.body
+
+    // Verificar si es administrador
+    if (!ADMIN_EMAILS.includes(admin_email?.toLowerCase())) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    // Obtener estadísticas
+    const totalUsuarios = await pool.query("SELECT COUNT(*) as count FROM usuarios")
+    const totalReservas = await pool.query("SELECT COUNT(*) as count FROM reservas")
+    const reservasActivas = await pool.query("SELECT COUNT(*) as count FROM reservas WHERE estado = 'confirmada'")
+    
+    // Ingresos del mes actual
+    const fechaActual = new Date()
+    const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1)
+    const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0)
+    
+    const ingresosMes = await pool.query(`
+      SELECT COALESCE(SUM(p.monto), 0) as total
+      FROM pagos p
+      WHERE p.fecha_pago >= $1 AND p.fecha_pago <= $2
+    `, [primerDiaMes.toISOString().split('T')[0], ultimoDiaMes.toISOString().split('T')[0]])
+
+    res.status(200).json({
+      success: true,
+      estadisticas: {
+        totalUsuarios: parseInt(totalUsuarios.rows[0].count),
+        totalReservas: parseInt(totalReservas.rows[0].count),
+        reservasActivas: parseInt(reservasActivas.rows[0].count),
+        ingresosMes: parseFloat(ingresosMes.rows[0].total)
+      }
+    })
+  } catch (error) {
+    console.error("Error al obtener estadísticas para admin:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las estadísticas" })
+  }
+})
+
 // Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
 app.get("/init-habitaciones", async (req, res) => {
   try {
@@ -675,6 +791,7 @@ app.get("/status", (req, res) => {
     currency: "ARS",
     precios_desde_db: true,
     tabla_pagos: "habilitada",
+    admin_accounts: "configuradas",
     timestamp: new Date().toISOString(),
   })
 })
@@ -684,8 +801,10 @@ pool
   .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor iniciado en puerto ${PORT}`)
-  console.log("💳 MercadoPago configurado con Access Token de prueba")
+app.listen(3000)
+console.log("🚀 Servidor iniciado en puerto 3000")
+console.log("💳 MercadoPago configurado con Access Token de prueba")
+console.log("👨‍💼 Cuentas de administrador configuradas:")
+Object.keys(ADMIN_ACCOUNTS).forEach(email => {
+  console.log(`   - ${email}`)
 })
