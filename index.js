@@ -56,21 +56,21 @@ app.post("/create", async (req, res) => {
   console.log("=== INICIO CREACIÓN DE USUARIO ===")
   console.log("Datos recibidos:", req.body)
   
-  const { nombre, correo, telefono, password } = req.body
+  const { nombre, correo, telefono, contrasena } = req.body
 
   try {
     // Validaciones de entrada
-    if (!nombre || !correo || !telefono || !password) {
+    if (!nombre || !correo || !telefono || !contrasena) {
       console.log("❌ Faltan campos obligatorios")
       console.log("Campos recibidos:", { 
         nombre: !!nombre, 
         correo: !!correo, 
         telefono: !!telefono, 
-        password: !!password 
+        contrasena: !!contrasena 
       })
       return res.status(400).json({ 
         success: false, 
-        message: "Todos los campos son obligatorios (nombre, correo, telefono, password)" 
+        message: "Todos los campos son obligatorios (nombre, correo, telefono, contrasena)" 
       })
     }
 
@@ -84,6 +84,16 @@ app.post("/create", async (req, res) => {
       })
     }
 
+    // Verificar si el usuario ya existe
+    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+    if (existingUser.rows.length > 0) {
+      console.log("❌ Usuario ya existe con este correo:", correo)
+      return res.status(400).json({ 
+        success: false, 
+        message: "Ya existe un usuario registrado con este correo electrónico" 
+      })
+    }
+
     console.log("✅ Validaciones pasadas")
     console.log("Nombre:", nombre)
     console.log("Correo:", correo)
@@ -92,7 +102,7 @@ app.post("/create", async (req, res) => {
     const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
     console.log("Código generado:", codigo)
 
-    usuariosPendientes[correo] = { codigo, nombre, telefono, password }
+    usuariosPendientes[correo] = { codigo, nombre, telefono, contrasena }
     console.log("Usuario guardado en pendientes")
 
     // Configuración del transporter - CORREGIDO
@@ -211,14 +221,14 @@ app.post("/verify-code", async (req, res) => {
     }
 
     // Código correcto, insertamos en la DB
-    const { nombre, telefono, password } = usuarioPendiente
+    const { nombre, telefono, contrasena } = usuarioPendiente
 
     console.log("Insertando usuario en la base de datos...")
     await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
       nombre,
       correo,
       telefono,
-      password,
+      contrasena,
     ])
 
     // Eliminamos de la lista temporal
@@ -292,7 +302,7 @@ async function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
       return 0
     }
 
-    const precioPorNoche = habitacionResult.rows[0].precio_por_noche
+    const precioPorNoche = parseFloat(habitacionResult.rows[0].precio_por_noche)
     const tipoHabitacion = habitacionResult.rows[0].tipo
 
     const fechaInicio = new Date(fecha_inicio)
@@ -441,16 +451,13 @@ app.post("/reservar", async (req, res) => {
     // Crear preferencia de MercadoPago
     const preference = new Preference(client)
 
-    const tiposHabitacion = {
-      1: "Habitación Individual",
-      2: "Habitación Doble",
-      3: "Suite Ejecutiva",
-    }
+    // Obtener el tipo de habitación real de la base de datos
+    const tipoHabitacion = habitacionResult.rows[0].tipo
 
     const preferenceData = {
       items: [
         {
-          title: `Reserva ${tiposHabitacion[habitacion_id]} - Hotelituss`,
+          title: `Reserva ${tipoHabitacion} - Hotelituss`,
           description: `Reserva del ${fecha_inicio} al ${fecha_fin}`,
           quantity: 1,
           currency_id: "ARS", // PESOS ARGENTINOS
@@ -480,9 +487,6 @@ app.post("/reservar", async (req, res) => {
     const result = await preference.create({ body: preferenceData })
 
     console.log("Preferencia creada exitosamente:", result.id)
-
-    // Guardar el preference_id en la reserva
-    await pool.query("UPDATE reservas SET preference_id = $1 WHERE id = $2", [result.id, reservaId])
 
     res.status(200).json({
       success: true,
@@ -592,7 +596,7 @@ app.post("/user-reservations", async (req, res) => {
 
     if (usuario_id) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
+        SELECT r.*, h.tipo as habitacion_tipo, h.numero as habitacion_numero, h.precio_por_noche,
                p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
@@ -603,7 +607,7 @@ app.post("/user-reservations", async (req, res) => {
       params = [usuario_id]
     } else if (correo) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
+        SELECT r.*, h.tipo as habitacion_tipo, h.numero as habitacion_numero, h.precio_por_noche,
                p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
@@ -629,11 +633,31 @@ app.post("/user-reservations", async (req, res) => {
   }
 })
 
+// Ruta para obtener todas las habitaciones disponibles
+app.get("/habitaciones", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, tipo, numero, precio_por_noche, disponible
+      FROM habitaciones 
+      WHERE disponible = true
+      ORDER BY tipo, numero
+    `)
+
+    res.status(200).json({
+      success: true,
+      habitaciones: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener habitaciones:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las habitaciones" })
+  }
+})
+
 // Nueva ruta para obtener todos los pagos
 app.get("/pagos", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*, r.fecha_inicio, r.fecha_fin, h.tipo as habitacion_tipo, u.nombre as cliente_nombre
+      SELECT p.*, r.fecha_inicio, r.fecha_fin, h.tipo as habitacion_tipo, h.numero as habitacion_numero, u.nombre as cliente_nombre
       FROM pagos p
       JOIN reservas r ON p.reserva_id = r.id
       JOIN habitaciones h ON r.habitacion_id = h.id
@@ -666,8 +690,6 @@ app.post("/cancel-reservation", async (req, res) => {
     if (reservaResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Reserva no encontrada" })
     }
-
-    const habitacionId = reservaResult.rows[0].habitacion_id
 
     // Actualizar estado de la reserva
     await pool.query("UPDATE reservas SET estado = 'cancelada' WHERE id = $1", [id])
@@ -704,23 +726,6 @@ app.post("/get-user-data", async (req, res) => {
   } catch (error) {
     console.error("Error al obtener datos del usuario:", error)
     res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-})
-
-// Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
-app.get("/init-habitaciones", async (req, res) => {
-  try {
-    // Verificar habitaciones existentes
-    const checkResult = await pool.query("SELECT * FROM habitaciones ORDER BY id")
-
-    res.status(200).json({
-      success: true,
-      message: "Habitaciones existentes en la base de datos",
-      habitaciones: checkResult.rows,
-    })
-  } catch (error) {
-    console.error("Error al consultar habitaciones:", error)
-    res.status(500).json({ success: false, message: "Error al consultar habitaciones" })
   }
 })
 
@@ -784,10 +789,9 @@ app.get("/status", (req, res) => {
     message: "Servidor funcionando correctamente",
     mercadopago: "configurado",
     currency: "ARS",
-    precios_desde_db: true,
-    tabla_pagos: "habilitada",
+    database_schema: "optimizado",
     email_system: "corregido",
-    campo_email: "correo",
+    campo_password: "contrasena",
     timestamp: new Date().toISOString(),
   })
 })
@@ -801,3 +805,4 @@ app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
 console.log("📧 Sistema de emails corregido usando campo 'correo'")
+console.log("🗄️ Base de datos optimizada para el esquema proporcionado")
