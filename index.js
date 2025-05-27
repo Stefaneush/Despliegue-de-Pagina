@@ -60,12 +60,12 @@ app.post("/create", async (req, res) => {
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
   const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  });
+    service: "gmail",
+    auth: {
+      user: "infohotelituss@gmail.com",
+      pass: "pgfnjkaohuukczog",
+    },
+  })
 
   const mailOptions = {
     from: '"Hotelitus" <infohotelituss@gmail.com>',
