@@ -53,129 +53,68 @@ app.get("/", async (req, res) => {
 
 //Crear usuario
 app.post("/create", async (req, res) => {
-  try {
-    const { nombre, correo, telefono, password } = req.body;
+  const { nombre, correo, telefono, password } = req.body
 
-    // ✅ VALIDACIONES IMPORTANTES
-    console.log("Datos recibidos:", { nombre, correo, telefono, password: "***" });
+  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
 
-    // Validar que el correo existe y es válido
-    if (!correo || typeof correo !== 'string') {
-      console.error("❌ Correo no proporcionado o inválido:", correo);
-      return res.status(400).json({ 
-        success: false, 
-        message: "Correo electrónico es requerido" 
-      });
-    }
+  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-    // Limpiar y validar formato del correo
-    const correoLimpio = correo.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (!emailRegex.test(correoLimpio)) {
-      console.error("❌ Formato de correo inválido:", correoLimpio);
-      return res.status(400).json({ 
-        success: false, 
-        message: "Formato de correo electrónico inválido" 
-      });
-    }
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "infohotelituss@gmail.com",
+      pass: "pgfn jkao huuk czog",
+    },
+  })
 
-    // Validar otros campos
-    if (!nombre || !telefono || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Todos los campos son requeridos" 
-      });
-    }
-
-    const codigo = crypto.randomInt(100000, 999999).toString();
-    
-    // Guardar con el correo limpio
-    usuariosPendientes[correoLimpio] = { codigo, nombre, telefono, password };
-
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: "infohotelituss@gmail.com",
-        pass: "pgfnjkaohuukczog" // Sin espacios
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-
-    const mailOptions = {
-      from: '"Hotelitus" <infohotelituss@gmail.com>',
-      to: correoLimpio, // ✅ Usar el correo limpio y validado
-      subject: "Código de verificación - Hotelitus",
-      html: `
-        <h2>Hola ${nombre} 👋</h2>
-        <p>Tu código de verificación es:</p>
-        <h3>${codigo}</h3>
-        <p>Ingresa este código en el sitio para completar tu registro.</p>
-      `,
-    };
-
-    console.log("📧 Enviando email a:", correoLimpio);
-    
-    await transporter.sendMail(mailOptions);
-    
-    console.log("✅ Email enviado exitosamente");
-    res.json({ success: true });
-
-  } catch (error) {
-    console.error("❌ Error completo al enviar email:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Error al enviar el código de verificación" 
-    });
+  const mailOptions = {
+    from: '"Hotelitus" <infohotelituss@gmail.com>',
+    to: correo,
+    subject: "Código de verificación - Hotelitus",
+    html: `
+            <h2>Hola ${nombre} 👋</h2>
+            <p>Tu código de verificación es:</p>
+            <h3>${codigo}</h3>
+            <p>Ingresa este código en el sitio para completar tu registro.</p>
+        `,
   }
-});
+
+  await transporter.sendMail(mailOptions)
+
+  // Respondemos al frontend para mostrar el modal
+  res.json({ success: true })
+})
 
 //Verificar codigo
 app.post("/verify-code", async (req, res) => {
-  try {
-    const { correo, codigo } = req.body;
+  const { correo, codigo } = req.body
 
-    // ✅ Limpiar el correo de la misma manera
-    const correoLimpio = correo ? correo.trim().toLowerCase() : '';
-    
-    console.log("Verificando código para:", correoLimpio);
-    
-    const usuarioPendiente = usuariosPendientes[correoLimpio];
+  const usuarioPendiente = usuariosPendientes[correo]
 
-    if (!usuarioPendiente) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Usuario no encontrado o código expirado." 
-      });
-    }
-
-    if (usuarioPendiente.codigo !== codigo) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "Código incorrecto." 
-      });
-    }
-
-    // Resto del código...
-    const { nombre, telefono, password } = usuarioPendiente;
-
-    await pool.query(
-      "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", 
-      [nombre, correoLimpio, telefono, password]
-    );
-
-    delete usuariosPendientes[correoLimpio];
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error en verificación:", error);
-    res.status(500).json({ success: false, message: "Error del servidor" });
+  if (!usuarioPendiente) {
+    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
   }
-});
+
+  if (usuarioPendiente.codigo !== codigo) {
+    return res.status(401).json({ success: false, message: "Código incorrecto." })
+  }
+
+  // Código correcto, insertamos en la DB
+  const { nombre, telefono, password } = usuarioPendiente
+
+  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
+    nombre,
+    correo,
+    telefono,
+    password,
+  ])
+
+  // Eliminamos de la lista temporal
+  delete usuariosPendientes[correo]
+
+  res.json({ success: true })
+})
+
 //iniciar sesion
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
