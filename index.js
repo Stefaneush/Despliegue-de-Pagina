@@ -51,223 +51,68 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario - CORREGIDO CON COMPATIBILIDAD TOTAL
+//Crear usuario
 app.post("/create", async (req, res) => {
-  console.log("=== INICIO CREACIÓN DE USUARIO ===")
-  console.log("Datos recibidos:", req.body)
-  
-  // COMPATIBILIDAD: Aceptar tanto los nombres nuevos como los antiguos
-  const { 
-    nombre, 
-    correo, 
-    email,           // Compatibilidad con frontend que use 'email'
-    telefono, 
-    contrasena, 
-    password         // Compatibilidad con frontend que use 'password'
-  } = req.body
+  const { nombre, correo, telefono, password } = req.body
 
-  // Usar el campo que esté disponible
-  const emailFinal = correo || email
-  const passwordFinal = contrasena || password
+  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
 
-  try {
-    console.log("=== CAMPOS PROCESADOS ===")
-    console.log("Email final:", emailFinal)
-    console.log("Password final:", passwordFinal)
-    
-    // Validaciones de entrada
-    if (!nombre || !emailFinal || !telefono || !passwordFinal) {
-      console.log("❌ Faltan campos obligatorios")
-      console.log("Campos procesados:", { 
-        nombre: !!nombre, 
-        emailFinal: !!emailFinal, 
-        telefono: !!telefono, 
-        passwordFinal: !!passwordFinal 
-      })
-      console.log("Campos originales:", { 
-        nombre: !!nombre, 
-        correo: !!correo,
-        email: !!email, 
-        telefono: !!telefono, 
-        contrasena: !!contrasena,
-        password: !!password
-      })
-      return res.status(400).json({ 
-        success: false, 
-        message: "Todos los campos son obligatorios (nombre, correo/email, telefono, contrasena/password)" 
-      })
-    }
+  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(emailFinal)) {
-      console.log("❌ Formato de email inválido:", emailFinal)
-      return res.status(400).json({ 
-        success: false, 
-        message: "Formato de email inválido" 
-      })
-    }
+  const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  });
 
-    // Verificar si el usuario ya existe
-    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [emailFinal])
-    if (existingUser.rows.length > 0) {
-      console.log("❌ Usuario ya existe con este correo:", emailFinal)
-      return res.status(400).json({ 
-        success: false, 
-        message: "Ya existe un usuario registrado con este correo electrónico" 
-      })
-    }
-
-    console.log("✅ Validaciones pasadas")
-    console.log("Nombre:", nombre)
-    console.log("Correo:", emailFinal)
-    console.log("Teléfono:", telefono)
-
-    const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
-    console.log("Código generado:", codigo)
-
-    usuariosPendientes[emailFinal] = { codigo, nombre, telefono, contrasena: passwordFinal }
-    console.log("Usuario guardado en pendientes")
-
-    // Configuración del transporter - CORREGIDO
-    console.log("Configurando transporter de nodemailer...")
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "infohotelituss@gmail.com",
-        pass: "pgfn jkao huuk czog",
-      },
-    })
-
-    // Verificar la configuración del transporter
-    console.log("Verificando configuración del transporter...")
-    await transporter.verify()
-    console.log("✅ Transporter verificado correctamente")
-
-    const mailOptions = {
-      from: '"Hotelitus" <infohotelituss@gmail.com>',
-      to: emailFinal.trim(), // Asegurar que no hay espacios
-      subject: "Código de verificación - Hotelitus",
-      html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #c8a97e;">Hola ${nombre} 👋</h2>
-                <p>Gracias por registrarte en Hotelitus.</p>
-                <p>Tu código de verificación es:</p>
-                <div style="background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0;">
-                  <h3 style="color: #c8a97e; font-size: 32px; margin: 0;">${codigo}</h3>
-                </div>
-                <p>Ingresa este código en el sitio para completar tu registro.</p>
-                <p>Este código expira en 10 minutos.</p>
-                <hr>
-                <p style="color: #666; font-size: 12px;">
-                  Si no solicitaste este código, puedes ignorar este email.
-                </p>
-              </div>
-          `,
-    }
-
-    console.log("Opciones de email configuradas:")
-    console.log("From:", mailOptions.from)
-    console.log("To:", mailOptions.to)
-    console.log("Subject:", mailOptions.subject)
-
-    console.log("Enviando email...")
-    const info = await transporter.sendMail(mailOptions)
-    console.log("✅ Email enviado exitosamente")
-    console.log("Message ID:", info.messageId)
-    console.log("Response:", info.response)
-
-    // Respondemos al frontend para mostrar el modal
-    res.json({ 
-      success: true, 
-      message: "Código de verificación enviado correctamente",
-      email: emailFinal // Para confirmar que se envió al email correcto
-    })
-
-  } catch (error) {
-    console.error("❌ Error completo al enviar código de verificación:")
-    console.error("Error message:", error.message)
-    console.error("Error code:", error.code)
-    console.error("Error stack:", error.stack)
-    
-    // Respuesta más específica según el tipo de error
-    let errorMessage = "No se pudo enviar el código de verificación. Intente nuevamente."
-    
-    if (error.code === 'EAUTH') {
-      errorMessage = "Error de autenticación con el servidor de email. Contacte al administrador."
-    } else if (error.code === 'EENVELOPE') {
-      errorMessage = "Error en la dirección de email. Verifique que sea correcta."
-    } else if (error.code === 'ECONNECTION') {
-      errorMessage = "Error de conexión con el servidor de email. Intente más tarde."
-    }
-    
-    res.status(500).json({ 
-      success: false, 
-      message: errorMessage,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    })
+  const mailOptions = {
+    from: '"Hotelitus" <infohotelituss@gmail.com>',
+    to: correo,
+    subject: "Código de verificación - Hotelitus",
+    html: `
+            <h2>Hola ${nombre} 👋</h2>
+            <p>Tu código de verificación es:</p>
+            <h3>${codigo}</h3>
+            <p>Ingresa este código en el sitio para completar tu registro.</p>
+        `,
   }
+
+  await transporter.sendMail(mailOptions)
+
+  // Respondemos al frontend para mostrar el modal
+  res.json({ success: true })
 })
 
-//Verificar codigo - MEJORADO CON LOGS Y COMPATIBILIDAD
+//Verificar codigo
 app.post("/verify-code", async (req, res) => {
-  try {
-    console.log("=== VERIFICACIÓN DE CÓDIGO ===")
-    console.log("Datos recibidos:", req.body)
-    
-    const { correo, email, codigo } = req.body
-    const emailFinal = correo || email
+  const { correo, codigo } = req.body
 
-    if (!emailFinal || !codigo) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Correo/email y código son obligatorios" 
-      })
-    }
+  const usuarioPendiente = usuariosPendientes[correo]
 
-    const usuarioPendiente = usuariosPendientes[emailFinal]
-    console.log("Usuario pendiente encontrado:", !!usuarioPendiente)
-
-    if (!usuarioPendiente) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Usuario no encontrado o código expirado." 
-      })
-    }
-
-    console.log("Código recibido:", codigo)
-    console.log("Código esperado:", usuarioPendiente.codigo)
-
-    if (usuarioPendiente.codigo !== codigo) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "Código incorrecto." 
-      })
-    }
-
-    // Código correcto, insertamos en la DB
-    const { nombre, telefono, contrasena } = usuarioPendiente
-
-    console.log("Insertando usuario en la base de datos...")
-    await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
-      nombre,
-      emailFinal,
-      telefono,
-      contrasena,
-    ])
-
-    // Eliminamos de la lista temporal
-    delete usuariosPendientes[emailFinal]
-    console.log("✅ Usuario creado exitosamente")
-
-    res.json({ success: true, message: "Usuario creado exitosamente" })
-  } catch (error) {
-    console.error("❌ Error al verificar código:", error)
-    res.status(500).json({ 
-      success: false, 
-      message: "Error al verificar el código" 
-    })
+  if (!usuarioPendiente) {
+    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
   }
+
+  if (usuarioPendiente.codigo !== codigo) {
+    return res.status(401).json({ success: false, message: "Código incorrecto." })
+  }
+
+  // Código correcto, insertamos en la DB
+  const { nombre, telefono, password } = usuarioPendiente
+
+  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
+    nombre,
+    correo,
+    telefono,
+    password,
+  ])
+
+  // Eliminamos de la lista temporal
+  delete usuariosPendientes[correo]
+
+  res.json({ success: true })
 })
 
 //iniciar sesion
@@ -327,7 +172,7 @@ async function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
       return 0
     }
 
-    const precioPorNoche = parseFloat(habitacionResult.rows[0].precio_por_noche)
+    const precioPorNoche = habitacionResult.rows[0].precio_por_noche
     const tipoHabitacion = habitacionResult.rows[0].tipo
 
     const fechaInicio = new Date(fecha_inicio)
@@ -476,13 +321,16 @@ app.post("/reservar", async (req, res) => {
     // Crear preferencia de MercadoPago
     const preference = new Preference(client)
 
-    // Obtener el tipo de habitación real de la base de datos
-    const tipoHabitacion = habitacionResult.rows[0].tipo
+    const tiposHabitacion = {
+      1: "Habitación Individual",
+      2: "Habitación Doble",
+      3: "Suite Ejecutiva",
+    }
 
     const preferenceData = {
       items: [
         {
-          title: `Reserva ${tipoHabitacion} - Hotelituss`,
+          title: `Reserva ${tiposHabitacion[habitacion_id]} - Hotelituss`,
           description: `Reserva del ${fecha_inicio} al ${fecha_fin}`,
           quantity: 1,
           currency_id: "ARS", // PESOS ARGENTINOS
@@ -512,6 +360,9 @@ app.post("/reservar", async (req, res) => {
     const result = await preference.create({ body: preferenceData })
 
     console.log("Preferencia creada exitosamente:", result.id)
+
+    // Guardar el preference_id en la reserva
+    await pool.query("UPDATE reservas SET preference_id = $1 WHERE id = $2", [result.id, reservaId])
 
     res.status(200).json({
       success: true,
@@ -621,7 +472,7 @@ app.post("/user-reservations", async (req, res) => {
 
     if (usuario_id) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.numero as habitacion_numero, h.precio_por_noche,
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
                p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
@@ -632,7 +483,7 @@ app.post("/user-reservations", async (req, res) => {
       params = [usuario_id]
     } else if (correo) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.numero as habitacion_numero, h.precio_por_noche,
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
                p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
@@ -658,31 +509,11 @@ app.post("/user-reservations", async (req, res) => {
   }
 })
 
-// Ruta para obtener todas las habitaciones disponibles
-app.get("/habitaciones", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT id, tipo, numero, precio_por_noche, disponible
-      FROM habitaciones 
-      WHERE disponible = true
-      ORDER BY tipo, numero
-    `)
-
-    res.status(200).json({
-      success: true,
-      habitaciones: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener habitaciones:", error)
-    res.status(500).json({ success: false, message: "Error al obtener las habitaciones" })
-  }
-})
-
 // Nueva ruta para obtener todos los pagos
 app.get("/pagos", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*, r.fecha_inicio, r.fecha_fin, h.tipo as habitacion_tipo, h.numero as habitacion_numero, u.nombre as cliente_nombre
+      SELECT p.*, r.fecha_inicio, r.fecha_fin, h.tipo as habitacion_tipo, u.nombre as cliente_nombre
       FROM pagos p
       JOIN reservas r ON p.reserva_id = r.id
       JOIN habitaciones h ON r.habitacion_id = h.id
@@ -715,6 +546,8 @@ app.post("/cancel-reservation", async (req, res) => {
     if (reservaResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Reserva no encontrada" })
     }
+
+    const habitacionId = reservaResult.rows[0].habitacion_id
 
     // Actualizar estado de la reserva
     await pool.query("UPDATE reservas SET estado = 'cancelada' WHERE id = $1", [id])
@@ -754,56 +587,20 @@ app.post("/get-user-data", async (req, res) => {
   }
 })
 
-// Ruta de prueba para envío de emails - USANDO CAMPO CORREO
-app.post("/test-email", async (req, res) => {
+// Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
+app.get("/init-habitaciones", async (req, res) => {
   try {
-    const { correo } = req.body
-    
-    if (!correo) {
-      return res.status(400).json({ success: false, message: "Correo requerido" })
-    }
+    // Verificar habitaciones existentes
+    const checkResult = await pool.query("SELECT * FROM habitaciones ORDER BY id")
 
-    console.log("=== PRUEBA DE EMAIL ===")
-    console.log("Correo destino:", correo)
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "infohotelituss@gmail.com",
-        pass: "pgfn jkao huuk czog",
-      },
+    res.status(200).json({
+      success: true,
+      message: "Habitaciones existentes en la base de datos",
+      habitaciones: checkResult.rows,
     })
-
-    await transporter.verify()
-    console.log("✅ Transporter verificado")
-
-    const mailOptions = {
-      from: '"Hotelitus Test" <infohotelituss@gmail.com>',
-      to: correo,
-      subject: "Prueba de envío de email",
-      html: `
-        <h2>Prueba exitosa</h2>
-        <p>Este es un email de prueba desde Hotelitus.</p>
-        <p>Fecha: ${new Date().toLocaleString()}</p>
-      `,
-    }
-
-    const info = await transporter.sendMail(mailOptions)
-    console.log("✅ Email de prueba enviado:", info.messageId)
-
-    res.json({ 
-      success: true, 
-      message: "Email de prueba enviado correctamente",
-      messageId: info.messageId
-    })
-
   } catch (error) {
-    console.error("❌ Error en prueba de email:", error)
-    res.status(500).json({ 
-      success: false, 
-      message: "Error en prueba de email",
-      error: error.message
-    })
+    console.error("Error al consultar habitaciones:", error)
+    res.status(500).json({ success: false, message: "Error al consultar habitaciones" })
   }
 })
 
@@ -814,9 +611,8 @@ app.get("/status", (req, res) => {
     message: "Servidor funcionando correctamente",
     mercadopago: "configurado",
     currency: "ARS",
-    database_schema: "optimizado",
-    email_system: "corregido",
-    compatibilidad: "total",
+    precios_desde_db: true,
+    tabla_pagos: "habilitada",
     timestamp: new Date().toISOString(),
   })
 })
@@ -829,5 +625,3 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
-console.log("📧 Sistema de emails con compatibilidad total")
-console.log("🔄 Acepta: correo/email y contrasena/password")
