@@ -55,15 +55,14 @@ app.get("/", async (req, res) => {
 app.post("/create", async (req, res) => {
   const { nombre, correo, telefono, password } = req.body
 
-  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
-
+  const codigo = crypto.randomInt(100000, 999999).toString()
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
-      pass: "pgfn jkao huuk czog",
+      pass: "TU_CONTRASEÑA_DE_APLICACIÓN_AQUÍ", // reemplaza con una contraseña de aplicación válida
     },
   })
 
@@ -72,18 +71,25 @@ app.post("/create", async (req, res) => {
     to: correo,
     subject: "Código de verificación - Hotelitus",
     html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Tu código de verificación es:</p>
-            <h3>${codigo}</h3>
-            <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `,
+      <h2>Hola ${nombre} 👋</h2>
+      <p>Tu código de verificación es:</p>
+      <h3>${codigo}</h3>
+      <p>Ingresa este código en el sitio para completar tu registro.</p>
+    `,
   }
 
-  await transporter.sendMail(mailOptions)
-
-  // Respondemos al frontend para mostrar el modal
-  res.json({ success: true })
+  try {
+    await transporter.sendMail(mailOptions)
+    res.json({ success: true })
+  } catch (error) {
+    console.error("Error al enviar correo:", error)
+    res.status(500).json({
+      success: false,
+      message: "Error al enviar el código de verificación. Por favor, inténtelo de nuevo.",
+    })
+  }
 })
+
 
 //Verificar codigo
 app.post("/verify-code", async (req, res) => {
