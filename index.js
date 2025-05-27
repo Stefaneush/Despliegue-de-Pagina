@@ -51,33 +51,57 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario - CORREGIDO CON VALIDACIONES Y LOGS
+//Crear usuario - CORREGIDO CON COMPATIBILIDAD TOTAL
 app.post("/create", async (req, res) => {
   console.log("=== INICIO CREACIÓN DE USUARIO ===")
   console.log("Datos recibidos:", req.body)
   
-  const { nombre, correo, telefono, contrasena } = req.body
+  // COMPATIBILIDAD: Aceptar tanto los nombres nuevos como los antiguos
+  const { 
+    nombre, 
+    correo, 
+    email,           // Compatibilidad con frontend que use 'email'
+    telefono, 
+    contrasena, 
+    password         // Compatibilidad con frontend que use 'password'
+  } = req.body
+
+  // Usar el campo que esté disponible
+  const emailFinal = correo || email
+  const passwordFinal = contrasena || password
 
   try {
+    console.log("=== CAMPOS PROCESADOS ===")
+    console.log("Email final:", emailFinal)
+    console.log("Password final:", passwordFinal)
+    
     // Validaciones de entrada
-    if (!nombre || !correo || !telefono || !contrasena) {
+    if (!nombre || !emailFinal || !telefono || !passwordFinal) {
       console.log("❌ Faltan campos obligatorios")
-      console.log("Campos recibidos:", { 
+      console.log("Campos procesados:", { 
         nombre: !!nombre, 
-        correo: !!correo, 
+        emailFinal: !!emailFinal, 
         telefono: !!telefono, 
-        contrasena: !!contrasena 
+        passwordFinal: !!passwordFinal 
+      })
+      console.log("Campos originales:", { 
+        nombre: !!nombre, 
+        correo: !!correo,
+        email: !!email, 
+        telefono: !!telefono, 
+        contrasena: !!contrasena,
+        password: !!password
       })
       return res.status(400).json({ 
         success: false, 
-        message: "Todos los campos son obligatorios (nombre, correo, telefono, contrasena)" 
+        message: "Todos los campos son obligatorios (nombre, correo/email, telefono, contrasena/password)" 
       })
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(correo)) {
-      console.log("❌ Formato de email inválido:", correo)
+    if (!emailRegex.test(emailFinal)) {
+      console.log("❌ Formato de email inválido:", emailFinal)
       return res.status(400).json({ 
         success: false, 
         message: "Formato de email inválido" 
@@ -85,9 +109,9 @@ app.post("/create", async (req, res) => {
     }
 
     // Verificar si el usuario ya existe
-    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [emailFinal])
     if (existingUser.rows.length > 0) {
-      console.log("❌ Usuario ya existe con este correo:", correo)
+      console.log("❌ Usuario ya existe con este correo:", emailFinal)
       return res.status(400).json({ 
         success: false, 
         message: "Ya existe un usuario registrado con este correo electrónico" 
@@ -96,13 +120,13 @@ app.post("/create", async (req, res) => {
 
     console.log("✅ Validaciones pasadas")
     console.log("Nombre:", nombre)
-    console.log("Correo:", correo)
+    console.log("Correo:", emailFinal)
     console.log("Teléfono:", telefono)
 
     const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
     console.log("Código generado:", codigo)
 
-    usuariosPendientes[correo] = { codigo, nombre, telefono, contrasena }
+    usuariosPendientes[emailFinal] = { codigo, nombre, telefono, contrasena: passwordFinal }
     console.log("Usuario guardado en pendientes")
 
     // Configuración del transporter - CORREGIDO
@@ -122,7 +146,7 @@ app.post("/create", async (req, res) => {
 
     const mailOptions = {
       from: '"Hotelitus" <infohotelituss@gmail.com>',
-      to: correo.trim(), // Asegurar que no hay espacios
+      to: emailFinal.trim(), // Asegurar que no hay espacios
       subject: "Código de verificación - Hotelitus",
       html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -157,7 +181,7 @@ app.post("/create", async (req, res) => {
     res.json({ 
       success: true, 
       message: "Código de verificación enviado correctamente",
-      email: correo // Para confirmar que se envió al email correcto
+      email: emailFinal // Para confirmar que se envió al email correcto
     })
 
   } catch (error) {
@@ -185,22 +209,23 @@ app.post("/create", async (req, res) => {
   }
 })
 
-//Verificar codigo - MEJORADO CON LOGS
+//Verificar codigo - MEJORADO CON LOGS Y COMPATIBILIDAD
 app.post("/verify-code", async (req, res) => {
   try {
     console.log("=== VERIFICACIÓN DE CÓDIGO ===")
     console.log("Datos recibidos:", req.body)
     
-    const { correo, codigo } = req.body
+    const { correo, email, codigo } = req.body
+    const emailFinal = correo || email
 
-    if (!correo || !codigo) {
+    if (!emailFinal || !codigo) {
       return res.status(400).json({ 
         success: false, 
-        message: "Correo y código son obligatorios" 
+        message: "Correo/email y código son obligatorios" 
       })
     }
 
-    const usuarioPendiente = usuariosPendientes[correo]
+    const usuarioPendiente = usuariosPendientes[emailFinal]
     console.log("Usuario pendiente encontrado:", !!usuarioPendiente)
 
     if (!usuarioPendiente) {
@@ -226,13 +251,13 @@ app.post("/verify-code", async (req, res) => {
     console.log("Insertando usuario en la base de datos...")
     await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
       nombre,
-      correo,
+      emailFinal,
       telefono,
       contrasena,
     ])
 
     // Eliminamos de la lista temporal
-    delete usuariosPendientes[correo]
+    delete usuariosPendientes[emailFinal]
     console.log("✅ Usuario creado exitosamente")
 
     res.json({ success: true, message: "Usuario creado exitosamente" })
@@ -791,7 +816,7 @@ app.get("/status", (req, res) => {
     currency: "ARS",
     database_schema: "optimizado",
     email_system: "corregido",
-    campo_password: "contrasena",
+    compatibilidad: "total",
     timestamp: new Date().toISOString(),
   })
 })
@@ -804,5 +829,5 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
-console.log("📧 Sistema de emails corregido usando campo 'correo'")
-console.log("🗄️ Base de datos optimizada para el esquema proporcionado")
+console.log("📧 Sistema de emails con compatibilidad total")
+console.log("🔄 Acepta: correo/email y contrasena/password")
