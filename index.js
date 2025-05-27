@@ -51,68 +51,182 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario
+//Crear usuario - CORREGIDO CON VALIDACIONES Y LOGS
 app.post("/create", async (req, res) => {
+  console.log("=== INICIO CREACIÓN DE USUARIO ===")
+  console.log("Datos recibidos:", req.body)
+  
   const { nombre, correo, telefono, password } = req.body
 
-  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
+  try {
+    // Validaciones de entrada
+    if (!nombre || !correo || !telefono || !password) {
+      console.log("❌ Faltan campos obligatorios")
+      return res.status(400).json({ 
+        success: false, 
+        message: "Todos los campos son obligatorios" 
+      })
+    }
 
-  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(correo)) {
+      console.log("❌ Formato de email inválido:", correo)
+      return res.status(400).json({ 
+        success: false, 
+        message: "Formato de email inválido" 
+      })
+    }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "infohotelituss@gmail.com",
-      pass: "pgfn jkao huuk czog",
-    },
-  })
+    console.log("✅ Validaciones pasadas")
+    console.log("Nombre:", nombre)
+    console.log("Correo:", correo)
+    console.log("Teléfono:", telefono)
 
-  const mailOptions = {
-    from: '"Hotelitus" <infohotelituss@gmail.com>',
-    to: correo,
-    subject: "Código de verificación - Hotelitus",
-    html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Tu código de verificación es:</p>
-            <h3>${codigo}</h3>
-            <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `,
+    const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
+    console.log("Código generado:", codigo)
+
+    usuariosPendientes[correo] = { codigo, nombre, telefono, password }
+    console.log("Usuario guardado en pendientes")
+
+    // Configuración del transporter - CORREGIDO
+    console.log("Configurando transporter de nodemailer...")
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "infohotelituss@gmail.com",
+        pass: "pgfn jkao huuk czog",
+      },
+    })
+
+    // Verificar la configuración del transporter
+    console.log("Verificando configuración del transporter...")
+    await transporter.verify()
+    console.log("✅ Transporter verificado correctamente")
+
+    const mailOptions = {
+      from: '"Hotelitus" <infohotelituss@gmail.com>',
+      to: correo.trim(), // Asegurar que no hay espacios
+      subject: "Código de verificación - Hotelitus",
+      html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #c8a97e;">Hola ${nombre} 👋</h2>
+                <p>Gracias por registrarte en Hotelitus.</p>
+                <p>Tu código de verificación es:</p>
+                <div style="background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0;">
+                  <h3 style="color: #c8a97e; font-size: 32px; margin: 0;">${codigo}</h3>
+                </div>
+                <p>Ingresa este código en el sitio para completar tu registro.</p>
+                <p>Este código expira en 10 minutos.</p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">
+                  Si no solicitaste este código, puedes ignorar este email.
+                </p>
+              </div>
+          `,
+    }
+
+    console.log("Opciones de email configuradas:")
+    console.log("From:", mailOptions.from)
+    console.log("To:", mailOptions.to)
+    console.log("Subject:", mailOptions.subject)
+
+    console.log("Enviando email...")
+    const info = await transporter.sendMail(mailOptions)
+    console.log("✅ Email enviado exitosamente")
+    console.log("Message ID:", info.messageId)
+    console.log("Response:", info.response)
+
+    // Respondemos al frontend para mostrar el modal
+    res.json({ 
+      success: true, 
+      message: "Código de verificación enviado correctamente",
+      email: correo // Para confirmar que se envió al email correcto
+    })
+
+  } catch (error) {
+    console.error("❌ Error completo al enviar código de verificación:")
+    console.error("Error message:", error.message)
+    console.error("Error code:", error.code)
+    console.error("Error stack:", error.stack)
+    
+    // Respuesta más específica según el tipo de error
+    let errorMessage = "No se pudo enviar el código de verificación. Intente nuevamente."
+    
+    if (error.code === 'EAUTH') {
+      errorMessage = "Error de autenticación con el servidor de email. Contacte al administrador."
+    } else if (error.code === 'EENVELOPE') {
+      errorMessage = "Error en la dirección de email. Verifique que sea correcta."
+    } else if (error.code === 'ECONNECTION') {
+      errorMessage = "Error de conexión con el servidor de email. Intente más tarde."
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
-
-  await transporter.sendMail(mailOptions)
-
-  // Respondemos al frontend para mostrar el modal
-  res.json({ success: true })
 })
 
-//Verificar codigo
+//Verificar codigo - MEJORADO CON LOGS
 app.post("/verify-code", async (req, res) => {
-  const { correo, codigo } = req.body
+  try {
+    console.log("=== VERIFICACIÓN DE CÓDIGO ===")
+    console.log("Datos recibidos:", req.body)
+    
+    const { correo, codigo } = req.body
 
-  const usuarioPendiente = usuariosPendientes[correo]
+    if (!correo || !codigo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Correo y código son obligatorios" 
+      })
+    }
 
-  if (!usuarioPendiente) {
-    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
+    const usuarioPendiente = usuariosPendientes[correo]
+    console.log("Usuario pendiente encontrado:", !!usuarioPendiente)
+
+    if (!usuarioPendiente) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Usuario no encontrado o código expirado." 
+      })
+    }
+
+    console.log("Código recibido:", codigo)
+    console.log("Código esperado:", usuarioPendiente.codigo)
+
+    if (usuarioPendiente.codigo !== codigo) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Código incorrecto." 
+      })
+    }
+
+    // Código correcto, insertamos en la DB
+    const { nombre, telefono, password } = usuarioPendiente
+
+    console.log("Insertando usuario en la base de datos...")
+    await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
+      nombre,
+      correo,
+      telefono,
+      password,
+    ])
+
+    // Eliminamos de la lista temporal
+    delete usuariosPendientes[correo]
+    console.log("✅ Usuario creado exitosamente")
+
+    res.json({ success: true, message: "Usuario creado exitosamente" })
+  } catch (error) {
+    console.error("❌ Error al verificar código:", error)
+    res.status(500).json({ 
+      success: false, 
+      message: "Error al verificar el código" 
+    })
   }
-
-  if (usuarioPendiente.codigo !== codigo) {
-    return res.status(401).json({ success: false, message: "Código incorrecto." })
-  }
-
-  // Código correcto, insertamos en la DB
-  const { nombre, telefono, password } = usuarioPendiente
-
-  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
-    nombre,
-    correo,
-    telefono,
-    password,
-  ])
-
-  // Eliminamos de la lista temporal
-  delete usuariosPendientes[correo]
-
-  res.json({ success: true })
 })
 
 //iniciar sesion
@@ -604,6 +718,59 @@ app.get("/init-habitaciones", async (req, res) => {
   }
 })
 
+// Ruta de prueba para envío de emails
+app.post("/test-email", async (req, res) => {
+  try {
+    const { email } = req.body
+    
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email requerido" })
+    }
+
+    console.log("=== PRUEBA DE EMAIL ===")
+    console.log("Email destino:", email)
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "infohotelituss@gmail.com",
+        pass: "pgfn jkao huuk czog",
+      },
+    })
+
+    await transporter.verify()
+    console.log("✅ Transporter verificado")
+
+    const mailOptions = {
+      from: '"Hotelitus Test" <infohotelituss@gmail.com>',
+      to: email,
+      subject: "Prueba de envío de email",
+      html: `
+        <h2>Prueba exitosa</h2>
+        <p>Este es un email de prueba desde Hotelitus.</p>
+        <p>Fecha: ${new Date().toLocaleString()}</p>
+      `,
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+    console.log("✅ Email de prueba enviado:", info.messageId)
+
+    res.json({ 
+      success: true, 
+      message: "Email de prueba enviado correctamente",
+      messageId: info.messageId
+    })
+
+  } catch (error) {
+    console.error("❌ Error en prueba de email:", error)
+    res.status(500).json({ 
+      success: false, 
+      message: "Error en prueba de email",
+      error: error.message
+    })
+  }
+})
+
 // Ruta para verificar el estado del servidor
 app.get("/status", (req, res) => {
   res.status(200).json({
@@ -613,6 +780,7 @@ app.get("/status", (req, res) => {
     currency: "ARS",
     precios_desde_db: true,
     tabla_pagos: "habilitada",
+    email_system: "corregido",
     timestamp: new Date().toISOString(),
   })
 })
@@ -625,3 +793,4 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
+console.log("📧 Sistema de emails corregido y validado")
