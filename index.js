@@ -22,6 +22,25 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const usuariosPendientes = {}
 
+// Lista de administradores predefinidos (no necesitan estar en la BD)
+const ADMIN_ACCOUNTS = {
+  "admin@hotelituss.com": {
+    password: "admin123",
+    nombre: "Administrador Principal"
+  },
+  "gerente@hotelituss.com": {
+    password: "gerente123", 
+    nombre: "Gerente General"
+  },
+  "administrador@hotelituss.com": {
+    password: "admin456",
+    nombre: "Administrador del Sistema"
+  }
+}
+
+// Lista de emails de administradores
+const ADMIN_EMAILS = Object.keys(ADMIN_ACCOUNTS)
+
 // Configurar MercadoPago
 const client = new MercadoPagoConfig({
   accessToken: MERCADOPAGO_ACCESS_TOKEN,
@@ -51,71 +70,329 @@ app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
-//Crear usuario
-app.post("/create", async (req, res) => {
-  const { nombre, correo, telefono, password } = req.body
-
-  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
-
-  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
-
-  const transporter = nodemailer.createTransport({
+// Configurar transporter de nodemailer con mejor configuración
+function createEmailTransporter() {
+  return nodemailer.createTransporter({
     service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true para 465, false para otros puertos
     auth: {
       user: "infohotelituss@gmail.com",
-      pass: "pgfn jkao huuk czog",
+      pass: "pgfn jkao huuk czog", // App Password de Gmail
     },
+    tls: {
+      rejectUnauthorized: false
+    }
   })
+}
 
-  const mailOptions = {
-    from: '"Hotelitus" <infohotelituss@gmail.com>',
-    to: correo,
-    subject: "Código de verificación - Hotelitus",
-    html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Tu código de verificación es:</p>
-            <h3>${codigo}</h3>
-            <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `,
+//Crear usuario - MEJORADO CON MEJOR MANEJO DE ERRORES
+app.post("/create", async (req, res) => {
+  try {
+    const { nombre, correo, telefono, password } = req.body
+
+    console.log("📧 Solicitud de creación de usuario:", { nombre, correo, telefono })
+
+    // Validar datos de entrada
+    if (!nombre || !correo || !telefono || !password) {
+      console.log("❌ Faltan datos requeridos")
+      return res.status(400).json({ 
+        success: false, 
+        message: "Todos los campos son requeridos" 
+      })
+    }
+
+    // Verificar si es un email de administrador
+    if (ADMIN_EMAILS.includes(correo.toLowerCase())) {
+      console.log("❌ Intento de registro con email de administrador:", correo)
+      return res.status(400).json({ 
+        success: false, 
+        message: "Este email está reservado para administradores. Use las credenciales de administrador para iniciar sesión directamente." 
+      })
+    }
+
+    // Verificar si el usuario ya existe
+    const existingUser = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+    if (existingUser.rows.length > 0) {
+      console.log("❌ Usuario ya existe:", correo)
+      return res.status(400).json({ 
+        success: false, 
+        message: "Ya existe una cuenta con este correo electrónico" 
+      })
+    }
+
+    // Generar código de verificación
+    const codigo = crypto.randomInt(100000, 999999).toString()
+    console.log("🔢 Código generado:", codigo, "para", correo)
+
+    // Guardar datos temporalmente
+    usuariosPendientes[correo] = { 
+      codigo, 
+      nombre, 
+      telefono, 
+      password,
+      timestamp: Date.now() // Para limpiar códigos expirados
+    }
+
+    console.log("💾 Usuario guardado temporalmente:", correo)
+
+    // Crear transporter
+    const transporter = createEmailTransporter()
+
+    // Verificar conexión antes de enviar
+    try {
+      await transporter.verify()
+      console.log("✅ Conexión SMTP verificada correctamente")
+    } catch (verifyError) {
+      console.error("❌ Error al verificar conexión SMTP:", verifyError)
+      return res.status(500).json({ 
+        success: false, 
+        message: "Error en el servicio de email. Inténtelo más tarde." 
+      })
+    }
+
+    // Configurar email
+    const mailOptions = {
+      from: {
+        name: "Hotelituss",
+        address: "infohotelituss@gmail.com"
+      },
+      to: correo,
+      subject: "Código de verificación - Hotelituss",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #c8a97e, #8b7355); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .code { background: #fff; border: 2px dashed #c8a97e; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+            .code h2 { color: #c8a97e; font-size: 32px; margin: 0; letter-spacing: 5px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🏨 Hotelituss</h1>
+              <p>Verificación de cuenta</p>
+            </div>
+            <div class="content">
+              <h2>¡Hola ${nombre}! 👋</h2>
+              <p>Gracias por registrarte en Hotelituss. Para completar tu registro, necesitamos verificar tu correo electrónico.</p>
+              
+              <div class="code">
+                <p><strong>Tu código de verificación es:</strong></p>
+                <h2>${codigo}</h2>
+              </div>
+              
+              <p>Ingresa este código en el sitio web para completar tu registro.</p>
+              <p><strong>Importante:</strong> Este código expira en 10 minutos por seguridad.</p>
+              
+              <p>Si no solicitaste este registro, puedes ignorar este email.</p>
+              
+              <p>¡Esperamos verte pronto en Hotelituss!</p>
+            </div>
+            <div class="footer">
+              <p>© 2023 Hotelituss - Experiencia de lujo en Mendoza, Argentina</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Hola ${nombre},
+        
+        Tu código de verificación para Hotelituss es: ${codigo}
+        
+        Ingresa este código en el sitio para completar tu registro.
+        Este código expira en 10 minutos.
+        
+        ¡Gracias por elegir Hotelituss!
+      `
+    }
+
+    console.log("📤 Enviando email a:", correo)
+
+    // Enviar email
+    const info = await transporter.sendMail(mailOptions)
+    console.log("✅ Email enviado exitosamente:", info.messageId)
+
+    // Programar limpieza del código después de 10 minutos
+    setTimeout(() => {
+      if (usuariosPendientes[correo] && usuariosPendientes[correo].codigo === codigo) {
+        delete usuariosPendientes[correo]
+        console.log("🧹 Código expirado y eliminado para:", correo)
+      }
+    }, 10 * 60 * 1000) // 10 minutos
+
+    // Responder al frontend
+    res.json({ 
+      success: true,
+      message: "Código de verificación enviado correctamente"
+    })
+
+  } catch (error) {
+    console.error("💥 Error completo al crear usuario:", error)
+    
+    // Limpiar datos temporales en caso de error
+    if (req.body.correo && usuariosPendientes[req.body.correo]) {
+      delete usuariosPendientes[req.body.correo]
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: "Error interno del servidor. Por favor, inténtelo de nuevo." 
+    })
   }
-
-  await transporter.sendMail(mailOptions)
-
-  // Respondemos al frontend para mostrar el modal
-  res.json({ success: true })
 })
 
-//Verificar codigo
+//Verificar codigo - MEJORADO
 app.post("/verify-code", async (req, res) => {
-  const { correo, codigo } = req.body
+  try {
+    const { correo, codigo } = req.body
 
-  const usuarioPendiente = usuariosPendientes[correo]
+    console.log("🔍 Verificando código para:", correo, "Código:", codigo)
 
-  if (!usuarioPendiente) {
-    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
+    if (!correo || !codigo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Correo y código son requeridos" 
+      })
+    }
+
+    const usuarioPendiente = usuariosPendientes[correo]
+
+    if (!usuarioPendiente) {
+      console.log("❌ Usuario no encontrado en pendientes:", correo)
+      return res.status(400).json({ 
+        success: false, 
+        message: "Código expirado o no válido. Solicite un nuevo código." 
+      })
+    }
+
+    if (usuarioPendiente.codigo !== codigo) {
+      console.log("❌ Código incorrecto. Esperado:", usuarioPendiente.codigo, "Recibido:", codigo)
+      return res.status(401).json({ 
+        success: false, 
+        message: "Código incorrecto. Verifique e inténtelo de nuevo." 
+      })
+    }
+
+    console.log("✅ Código correcto, creando usuario en BD")
+
+    // Código correcto, insertamos en la DB
+    const { nombre, telefono, password } = usuarioPendiente
+
+    const result = await pool.query(
+      "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4) RETURNING id",
+      [nombre, correo, telefono, password]
+    )
+
+    console.log("✅ Usuario creado en BD con ID:", result.rows[0].id)
+
+    // Eliminamos de la lista temporal
+    delete usuariosPendientes[correo]
+
+    res.json({ 
+      success: true,
+      message: "Usuario creado exitosamente"
+    })
+
+  } catch (error) {
+    console.error("💥 Error al verificar código:", error)
+    res.status(500).json({ 
+      success: false, 
+      message: "Error interno del servidor" 
+    })
   }
-
-  if (usuarioPendiente.codigo !== codigo) {
-    return res.status(401).json({ success: false, message: "Código incorrecto." })
-  }
-
-  // Código correcto, insertamos en la DB
-  const { nombre, telefono, password } = usuarioPendiente
-
-  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
-    nombre,
-    correo,
-    telefono,
-    password,
-  ])
-
-  // Eliminamos de la lista temporal
-  delete usuariosPendientes[correo]
-
-  res.json({ success: true })
 })
 
-//iniciar sesion
+// Endpoint para reenviar código
+app.post("/resend-code", async (req, res) => {
+  try {
+    const { correo } = req.body
+
+    console.log("🔄 Solicitud de reenvío de código para:", correo)
+
+    if (!correo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Correo es requerido" 
+      })
+    }
+
+    const usuarioPendiente = usuariosPendientes[correo]
+
+    if (!usuarioPendiente) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "No hay solicitud de registro pendiente para este correo" 
+      })
+    }
+
+    // Generar nuevo código
+    const nuevoCodigo = crypto.randomInt(100000, 999999).toString()
+    usuarioPendientes[correo].codigo = nuevoCodigo
+    usuarioPendientes[correo].timestamp = Date.now()
+
+    console.log("🔢 Nuevo código generado:", nuevoCodigo)
+
+    // Enviar nuevo código
+    const transporter = createEmailTransporter()
+    
+    const mailOptions = {
+      from: {
+        name: "Hotelituss",
+        address: "infohotelituss@gmail.com"
+      },
+      to: correo,
+      subject: "Nuevo código de verificación - Hotelituss",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #c8a97e;">🏨 Hotelituss</h2>
+          <h3>Nuevo código de verificación</h3>
+          <p>Hola ${usuarioPendiente.nombre},</p>
+          <p>Has solicitado un nuevo código de verificación:</p>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <h2 style="color: #c8a97e; font-size: 32px; margin: 0; letter-spacing: 5px;">${nuevoCodigo}</h2>
+          </div>
+          <p>Este código expira en 10 minutos.</p>
+          <p>¡Gracias por elegir Hotelituss!</p>
+        </div>
+      `
+    }
+
+    await transporter.sendMail(mailOptions)
+    console.log("✅ Nuevo código enviado exitosamente")
+
+    // Programar limpieza
+    setTimeout(() => {
+      if (usuariosPendientes[correo] && usuariosPendientes[correo].codigo === nuevoCodigo) {
+        delete usuariosPendientes[correo]
+        console.log("🧹 Nuevo código expirado y eliminado para:", correo)
+      }
+    }, 10 * 60 * 1000)
+
+    res.json({ 
+      success: true,
+      message: "Nuevo código enviado correctamente"
+    })
+
+  } catch (error) {
+    console.error("💥 Error al reenviar código:", error)
+    res.status(500).json({ 
+      success: false, 
+      message: "Error al reenviar código" 
+    })
+  }
+})
+
+//iniciar sesion - MODIFICADO PARA SOPORTAR ADMINISTRADORES PREDEFINIDOS
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
   console.log("Headers:", req.headers)
@@ -130,6 +407,35 @@ app.post("/sesion", async (req, res) => {
 
     console.log(`Buscando usuario con email: ${email}`)
 
+    // Verificar si es un administrador predefinido
+    const adminAccount = ADMIN_ACCOUNTS[email.toLowerCase()]
+    if (adminAccount) {
+      if (adminAccount.password === password) {
+        console.log("Login de administrador exitoso")
+        
+        // Para solicitudes de formulario tradicionales
+        if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
+          return res.redirect("https://hotelituss1.vercel.app/?logged=true&admin=true")
+        }
+
+        // Para solicitudes JSON
+        return res.status(200).json({
+          success: true,
+          message: "Login de administrador exitoso",
+          user: {
+            id: 0, // ID especial para administradores
+            nombre: adminAccount.nombre,
+            correo: email,
+            isAdmin: true
+          },
+        })
+      } else {
+        console.log("Contraseña de administrador incorrecta")
+        return res.status(401).json({ message: "Credenciales de administrador incorrectas" })
+      }
+    }
+
+    // Si no es administrador, buscar en la base de datos de usuarios normales
     const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
 
     console.log("Resultado de búsqueda:", result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado")
@@ -151,6 +457,7 @@ app.post("/sesion", async (req, res) => {
         id: result.rows[0].id,
         nombre: result.rows[0].nombre,
         correo: result.rows[0].correo,
+        isAdmin: false
       },
     })
   } catch (error) {
@@ -587,6 +894,127 @@ app.post("/get-user-data", async (req, res) => {
   }
 })
 
+// ENDPOINTS PARA ADMINISTRACIÓN - MODIFICADOS PARA USAR ADMIN_EMAILS
+
+// Endpoint para obtener todas las reservas (solo administradores)
+app.post("/admin/reservas", async (req, res) => {
+  try {
+    const { admin_email } = req.body
+
+    // Verificar si es administrador
+    if (!ADMIN_EMAILS.includes(admin_email?.toLowerCase())) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        r.id,
+        r.fecha_inicio,
+        r.fecha_fin,
+        r.estado,
+        u.nombre as cliente_nombre,
+        u.correo as cliente_correo,
+        u.telefono as cliente_telefono,
+        h.tipo as habitacion_tipo,
+        h.precio_por_noche,
+        p.monto as monto_pagado,
+        p.fecha_pago
+      FROM reservas r
+      JOIN usuarios u ON r.usuario_id = u.id
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      LEFT JOIN pagos p ON r.id = p.reserva_id
+      ORDER BY r.fecha_inicio DESC
+    `)
+
+    res.status(200).json({
+      success: true,
+      reservas: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener reservas para admin:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las reservas" })
+  }
+})
+
+// Endpoint para obtener todos los huéspedes (solo administradores)
+app.post("/admin/huespedes", async (req, res) => {
+  try {
+    const { admin_email } = req.body
+
+    // Verificar si es administrador
+    if (!ADMIN_EMAILS.includes(admin_email?.toLowerCase())) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.nombre,
+        u.correo,
+        u.telefono,
+        COUNT(r.id) as total_reservas,
+        MAX(r.fecha_inicio) as ultima_reserva,
+        CASE 
+          WHEN COUNT(r.id) > 0 THEN 'Activo'
+          ELSE 'Inactivo'
+        END as estado
+      FROM usuarios u
+      LEFT JOIN reservas r ON u.id = r.usuario_id
+      GROUP BY u.id, u.nombre, u.correo, u.telefono
+      ORDER BY u.nombre ASC
+    `)
+
+    res.status(200).json({
+      success: true,
+      huespedes: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener huéspedes para admin:", error)
+    res.status(500).json({ success: false, message: "Error al obtener los huéspedes" })
+  }
+})
+
+// Endpoint para obtener estadísticas del dashboard (solo administradores)
+app.post("/admin/estadisticas", async (req, res) => {
+  try {
+    const { admin_email } = req.body
+
+    // Verificar si es administrador
+    if (!ADMIN_EMAILS.includes(admin_email?.toLowerCase())) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    // Obtener estadísticas
+    const totalUsuarios = await pool.query("SELECT COUNT(*) as count FROM usuarios")
+    const totalReservas = await pool.query("SELECT COUNT(*) as count FROM reservas")
+    const reservasActivas = await pool.query("SELECT COUNT(*) as count FROM reservas WHERE estado = 'confirmada'")
+    
+    // Ingresos del mes actual
+    const fechaActual = new Date()
+    const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1)
+    const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0)
+    
+    const ingresosMes = await pool.query(`
+      SELECT COALESCE(SUM(p.monto), 0) as total
+      FROM pagos p
+      WHERE p.fecha_pago >= $1 AND p.fecha_pago <= $2
+    `, [primerDiaMes.toISOString().split('T')[0], ultimoDiaMes.toISOString().split('T')[0]])
+
+    res.status(200).json({
+      success: true,
+      estadisticas: {
+        totalUsuarios: parseInt(totalUsuarios.rows[0].count),
+        totalReservas: parseInt(totalReservas.rows[0].count),
+        reservasActivas: parseInt(reservasActivas.rows[0].count),
+        ingresosMes: parseFloat(ingresosMes.rows[0].total)
+      }
+    })
+  } catch (error) {
+    console.error("Error al obtener estadísticas para admin:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las estadísticas" })
+  }
+})
+
 // Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
 app.get("/init-habitaciones", async (req, res) => {
   try {
@@ -613,9 +1041,28 @@ app.get("/status", (req, res) => {
     currency: "ARS",
     precios_desde_db: true,
     tabla_pagos: "habilitada",
+    admin_accounts: "configuradas",
+    email_service: "configurado",
     timestamp: new Date().toISOString(),
   })
 })
+
+// Limpiar códigos expirados cada hora
+setInterval(() => {
+  const now = Date.now()
+  const expiredEmails = []
+  
+  for (const [email, data] of Object.entries(usuariosPendientes)) {
+    if (now - data.timestamp > 10 * 60 * 1000) { // 10 minutos
+      expiredEmails.push(email)
+    }
+  }
+  
+  expiredEmails.forEach(email => {
+    delete usuariosPendientes[email]
+    console.log("🧹 Código expirado eliminado para:", email)
+  })
+}, 60 * 60 * 1000) // Cada hora
 
 pool
   .connect()
@@ -625,3 +1072,8 @@ pool
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
+console.log("📧 Servicio de email configurado")
+console.log("👨‍💼 Cuentas de administrador configuradas:")
+Object.keys(ADMIN_ACCOUNTS).forEach(email => {
+  console.log(`   - ${email}`)
+})
