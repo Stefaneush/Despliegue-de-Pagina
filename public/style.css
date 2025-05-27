@@ -30,6 +30,150 @@ body {
   scroll-padding-top: 80px;
 }
 
+/* Correcciones de contraste para modo claro y oscuro */
+body.dark-mode {
+  color: #e0e0e0;
+  background-color: var(--dark-color);
+}
+
+/* Corrección para el logo en modo oscuro */
+body.dark-mode .navbar-brand .brand-text {
+  color: #fff !important;
+}
+
+/* Mejoras para el dropdown de perfil */
+#userProfileDropdown .dropdown-toggle {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+}
+
+#userProfileDropdown .dropdown-toggle:hover {
+  background-color: rgba(200, 169, 126, 0.1);
+}
+
+body.dark-mode #userProfileDropdown .dropdown-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #c8a97e;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+#userProfileDropdown .dropdown-menu {
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem 0;
+  min-width: 240px;
+}
+
+body.dark-mode #userProfileDropdown .dropdown-menu {
+  background-color: #2d2d2d;
+  border-color: #444;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode #userProfileDropdown .dropdown-item {
+  color: #e0e0e0;
+}
+
+body.dark-mode #userProfileDropdown .dropdown-item:hover {
+  background-color: #3d3d3d;
+}
+
+.user-profile-header {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+body.dark-mode .user-profile-header {
+  border-bottom: 1px solid #444;
+}
+
+.user-profile-header .user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #c8a97e;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 15px;
+}
+
+/* Correcciones para textos en modo oscuro */
+body.dark-mode .card,
+body.dark-mode .modal-content,
+body.dark-mode .testimonial-card,
+body.dark-mode .service-card,
+body.dark-mode .room-card {
+  background-color: #2d2d2d;
+  color: #e0e0e0;
+}
+
+body.dark-mode .card-title,
+body.dark-mode .modal-title,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6,
+body.dark-mode .section-title,
+body.dark-mode .testimonial-author {
+  color: #fff;
+}
+
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+  background-color: #333;
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+body.dark-mode .input-group-text {
+  background-color: #444;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+/* Correcciones para enlaces en modo oscuro */
+body.dark-mode a:not(.btn) {
+  color: #c8a97e;
+}
+
+body.dark-mode a:not(.btn):hover {
+  color: #d9ba8c;
+}
+
+/* Correcciones para textos en modo claro */
+.testimonial-text,
+.card-text,
+.section-subtitle,
+p {
+  color: #555;
+}
+
+body.dark-mode .testimonial-text,
+body.dark-mode .card-text,
+body.dark-mode .section-subtitle,
+body.dark-mode p {
+  color: #ccc;
+}
+
 h1,
 h2,
 h3,
@@ -487,73 +631,6 @@ a:hover {
   color: white;
 }
 
-/* Galería Section */
-.gallery-item {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--border-radius-lg);
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
-}
-
-.gallery-img {
-  transition: var(--transition);
-  height: 250px;
-  object-fit: cover;
-  width: 100%;
-  border-radius: var(--border-radius-lg);
-}
-
-.gallery-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.gallery-item:hover .gallery-overlay {
-  opacity: 1;
-}
-
-.gallery-item:hover .gallery-img {
-  transform: scale(1.05);
-}
-
-.gallery-info {
-  text-align: center;
-  color: white;
-}
-
-.gallery-info h5 {
-  color: white;
-  margin-bottom: 1rem;
-}
-
-.gallery-icon {
-  width: 40px;
-  height: 40px;
-  background-color: var(--primary-color);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  margin: 0 auto;
-  transition: var(--transition);
-}
-
-.gallery-icon:hover {
-  transform: scale(1.1);
-  background-color: var(--primary-color-hover);
-}
-
 /* Reservas Section */
 .reservation-form {
   background-color: white;
@@ -914,7 +991,6 @@ footer h5::after {
 }
 
 /* Botones flotantes */
-/* Modificar los estilos de los botones flotantes para asegurar que sean visibles */
 #backToTop,
 #darkModeToggle {
   width: 50px;
@@ -929,7 +1005,6 @@ footer h5::after {
   z-index: 999;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   transition: var(--transition);
-  /* Eliminar opacity: 0 y visibility: hidden para que sean visibles por defecto */
 }
 
 #backToTop {
@@ -942,43 +1017,11 @@ footer h5::after {
 #darkModeToggle {
   right: 30px;
   bottom: 90px;
-  /* Asegurar que el botón de modo oscuro sea siempre visible */
   opacity: 1;
   visibility: visible;
 }
 
 #backToTop.show {
-  opacity: 1;
-  visibility: visible;
-}
-
-#backToTop:hover,
-#darkModeToggle:hover {
-  background-color: var(--primary-color-hover);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
-}
-
-#backToTop i,
-#darkModeToggle i {
-  font-size: 1.25rem;
-}
-
-/* Ajustar posición en dispositivos móviles */
-@media (max-width: 991.98px) {
-  #backToTop {
-    right: 20px;
-    bottom: 20px;
-  }
-
-  #darkModeToggle {
-    right: 20px;
-    bottom: 80px;
-  }
-}
-
-#backToTop.show,
-#darkModeToggle.show {
   opacity: 1;
   visibility: visible;
 }
@@ -1111,42 +1154,26 @@ body.dark-mode .contact-method {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Animaciones */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Estilos para verificación */
+.verification-input {
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.25rem;
+  transition: var(--transition);
+  border: 2px solid var(--border-color);
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.8s ease forwards;
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite;
-}
-
-/* Mejoras de accesibilidad */
-.form-control:focus,
-.btn:focus {
+.verification-input:focus {
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 0.25rem rgba(200, 169, 126, 0.25);
+}
+
+body.dark-mode .verification-input {
+  background-color: var(--dark-color);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
 /* Responsive */
@@ -1221,10 +1248,6 @@ body.dark-mode .contact-method {
     height: 200px;
   }
 
-  .gallery-img {
-    height: 200px;
-  }
-
   .experience-badge {
     width: 80px;
     height: 80px;
@@ -1266,15 +1289,191 @@ body.dark-mode .contact-method {
   }
 }
 
-/* Mejorar la visibilidad del botón de cerrar sesión */
-#logoutBtn {
-  margin-left: 0.5rem;
-  padding: 0.5rem 1.25rem;
-  font-weight: 500;
-  transition: all 0.3s ease;
+/* Estilos para el panel de administración */
+#admin-panel {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  padding-top: 100px;
 }
 
-#logoutBtn:hover {
+body.dark-mode #admin-panel {
+  background-color: var(--dark-color);
+}
+
+.admin-user-info .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
+/* Estilos para las tarjetas de estadísticas */
+.card {
+  border: none;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Estilos para las pestañas de administración */
+.nav-tabs .nav-link {
+  border: none;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  color: var(--text-color);
+  font-weight: 500;
+  padding: 1rem 1.5rem;
+  transition: var(--transition);
+}
+
+.nav-tabs .nav-link:hover {
+  background-color: var(--primary-color-light);
+  color: var(--primary-color);
+}
+
+.nav-tabs .nav-link.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+body.dark-mode .nav-tabs .nav-link {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+body.dark-mode .nav-tabs .nav-link:hover {
+  background-color: rgba(200, 169, 126, 0.2);
+  color: var(--primary-color);
+}
+
+/* Estilos para las tablas de administración */
+.table {
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.table thead th {
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+  transition: var(--transition);
+}
+
+.table tbody tr:hover {
+  background-color: var(--primary-color-light);
+  transform: scale(1.01);
+}
+
+body.dark-mode .table {
+  background-color: var(--secondary-color);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.dark-mode .table thead th {
+  background-color: var(--dark-color) !important;
+  color: white;
+}
+
+body.dark-mode .table tbody tr:hover {
+  background-color: rgba(200, 169, 126, 0.1);
+}
+
+/* Estilos para los botones de acción */
+.btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: var(--border-radius);
+}
+
+/* Estilos para los badges de estado */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--border-radius);
+}
+
+/* Estilos responsivos para el panel de administración */
+@media (max-width: 768px) {
+  #admin-panel {
+    padding-top: 80px;
+  }
+
+  .admin-user-info .badge {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .nav-tabs .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .table-responsive {
+    font-size: 0.85rem;
+  }
+
+  .btn-group-sm .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+}
+
+/* Animaciones para el panel de administración */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card,
+.table {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Estilos para los iconos en las estadísticas */
+.card .fa-2x {
+  opacity: 0.8;
+}
+
+/* Estilos para mejorar la legibilidad en modo oscuro */
+body.dark-mode .card {
+  background-color: var(--secondary-color);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.dark-mode .tab-content {
+  background-color: var(--secondary-color);
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+/* Estilos para los spinners de carga */
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Estilos para mejorar la accesibilidad */
+.btn:focus,
+.nav-link:focus {
+  box-shadow: 0 0 0 0.25rem rgba(200, 169, 126, 0.25);
+}
+
+/* Estilos para las alertas en el panel de administración */
+.alert {
+  border: none;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
 }

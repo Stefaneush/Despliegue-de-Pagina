@@ -1,601 +1,473 @@
-import express from "express"
-import { config } from "dotenv"
-import pg from "pg"
-import cors from "cors"
-import crypto from "crypto"
-import nodemailer from "nodemailer"
-
-import path from "path"
-import { fileURLToPath } from "url"
-
-config()
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const express = require("express")
+const cors = require("cors")
+const { Pool } = require("pg")
+const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
 
 const app = express()
-const usuariosPendientes = {}
+const port = 3000
 
-//usar cors para validar datos a traves de las paginas
-app.use(
-  cors({
-    origin: "*", // Permitir todas las solicitudes de origen cruzado
-    methods: ["GET", "POST"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Cabeceras permitidas
-  }),
-)
+// Configuración de la base de datos PostgreSQL
+const pool = new Pool({
+  user: "tu_usuario",
+  host: "localhost",
+  database: "hotelituss",
+  password: "tu_contraseña",
+  port: 5432,
+})
 
-// Middleware para analizar JSON y datos de formulario
+// Middleware
+app.use(cors())
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
 
-// Servir archivos estáticos desde la carpeta 'public'
-app.use(express.static("public"))
+// Clave secreta para JWT
+const JWT_SECRET = "tu_clave_secreta_muy_segura"
 
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-})
-
-app.get("/", async (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"))
-})
-
-//Crear usuario
-app.post("/create", async (req, res) => {
-  const { nombre, correo, telefono, password } = req.body
-
-  const codigo = crypto.randomInt(100000, 999999).toString() // Código de 6 dígitos
-
-  usuariosPendientes[correo] = { codigo, nombre, telefono, password }
-
-  const transporter = nodemailer.createTransporter({
-    service: "gmail",
-    auth: {
-      user: "infohotelituss@gmail.com",
-      pass: "pgfn jkao huuk czog",
-    },
-  })
-
-  const mailOptions = {
-    from: '"Hotelitus" <infohotelituss@gmail.com>',
-    to: correo,
-    subject: "Código de verificación - Hotelitus",
-    html: `
-            <h2>Hola ${nombre} 👋</h2>
-            <p>Tu código de verificación es:</p>
-            <h3>${codigo}</h3>
-            <p>Ingresa este código en el sitio para completar tu registro.</p>
-        `,
-  }
-
-  await transporter.sendMail(mailOptions)
-
-  // Respondemos al frontend para mostrar el modal
-  res.json({ success: true })
-})
-
-//Verificar codigo
-app.post("/verify-code", async (req, res) => {
-  const { correo, codigo } = req.body
-
-  const usuarioPendiente = usuariosPendientes[correo]
-
-  if (!usuarioPendiente) {
-    return res.status(400).json({ success: false, message: "Usuario no encontrado o código expirado." })
-  }
-
-  if (usuarioPendiente.codigo !== codigo) {
-    return res.status(401).json({ success: false, message: "Código incorrecto." })
-  }
-
-  // Código correcto, insertamos en la DB
-  const { nombre, telefono, password } = usuarioPendiente
-
-  await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4);", [
-    nombre,
-    correo,
-    telefono,
-    password,
-  ])
-
-  // Eliminamos de la lista temporal
-  delete usuariosPendientes[correo]
-
-  res.json({ success: true })
-})
-
-// Lista de administradores predefinidos (sin cambiar la base de datos)
-const ADMINISTRADORES = [
-  'admin@hotelituss.com',
-  'gerente@hotelituss.com',
-  'administrador@hotelituss.com'
-]
+// Lista de administradores predefinidos (emails)
+const adminEmails = ["admin@hotelituss.com", "gerente@hotelituss.com", "superadmin@hotelituss.com"]
 
 // Función para verificar si un usuario es administrador
-function esAdministrador(correo) {
-  return ADMINISTRADORES.includes(correo.toLowerCase())
+function isAdmin(email) {
+  return adminEmails.includes(email.toLowerCase())
 }
 
-//iniciar sesion
-app.post("/sesion", async (req, res) => {
-  console.log("Datos recibidos del login:", req.body)
-  console.log("Headers:", req.headers)
+// Middleware para verificar autenticación
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"]
+  const token = authHeader && authHeader.split(" ")[1]
 
-  try {
-    const { email, password } = req.body
+  if (!token) {
+    return res.status(401).json({ error: "Token de acceso requerido" })
+  }
 
-    if (!email || !password) {
-      console.log("Faltan credenciales")
-      return res.status(400).json({ message: "Faltan credenciales" })
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Token inválido" })
     }
+    req.user = user
+    next()
+  })
+}
 
-    console.log(`Buscando usuario con email: ${email}`)
+// Middleware para verificar si es administrador
+const requireAdmin = (req, res, next) => {
+  if (!isAdmin(req.user.correo)) {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." })
+  }
+  next()
+}
 
-    // Verificar si es un administrador con credenciales especiales
-    if (esAdministrador(email)) {
-      // Credenciales especiales para administradores
-      if (password === 'admin123' || password === 'gerente2024') {
-        console.log("Login de administrador exitoso")
-        
-        // Para solicitudes de formulario tradicionales
-        if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
-          const redirectUrl = "https://hotelituss1.vercel.app/?logged=true&admin=true"
-          return res.redirect(redirectUrl)
-        }
+// Inicializar datos de prueba
+async function initializeData() {
+  try {
+    // Crear administradores si no existen
+    for (const email of adminEmails) {
+      const existingAdmin = await pool.query("SELECT * FROM usuarios WHERE correo = $1", [email])
 
-        // Para solicitudes JSON
-        return res.status(200).json({
-          success: true,
-          message: "Login de administrador exitoso",
-          user: {
-            id: 999, // ID especial para admin
-            nombre: "Administrador",
-            correo: email,
-            rol: 'administrador'
-          },
-          isAdmin: true
-        })
+      if (existingAdmin.rows.length === 0) {
+        const hashedPassword = await bcrypt.hash("admin123", 10)
+        await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4)", [
+          `Administrador ${email.split("@")[0]}`,
+          email,
+          "+54 261 423 7890",
+          hashedPassword,
+        ])
+        console.log(`Administrador creado: ${email}`)
       }
     }
 
-    // Login normal para usuarios regulares
-    const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
+    // Crear habitaciones de ejemplo si no existen
+    const habitacionesExistentes = await pool.query("SELECT COUNT(*) FROM habitaciones")
+    if (Number.parseInt(habitacionesExistentes.rows[0].count) === 0) {
+      const habitacionesEjemplo = [
+        { tipo: "individual", numero: 101, precio: 120.0, disponible: true },
+        { tipo: "individual", numero: 102, precio: 120.0, disponible: true },
+        { tipo: "doble", numero: 201, precio: 180.0, disponible: true },
+        { tipo: "doble", numero: 202, precio: 180.0, disponible: true },
+        { tipo: "suite", numero: 301, precio: 280.0, disponible: true },
+        { tipo: "suite", numero: 302, precio: 280.0, disponible: true },
+      ]
 
-    console.log("Resultado de búsqueda:", result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado")
+      for (const habitacion of habitacionesEjemplo) {
+        await pool.query(
+          "INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES ($1, $2, $3, $4)",
+          [habitacion.tipo, habitacion.numero, habitacion.precio, habitacion.disponible],
+        )
+      }
+      console.log("Habitaciones de ejemplo creadas")
+    }
+  } catch (error) {
+    console.error("Error inicializando datos:", error)
+  }
+}
 
+// Rutas de autenticación
+
+// Registro de usuario
+app.post("/api/register", async (req, res) => {
+  try {
+    const { nombre, correo, telefono, contrasena } = req.body
+
+    // Verificar si el usuario ya existe
+    const existingUser = await pool.query("SELECT * FROM usuarios WHERE correo = $1", [correo])
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: "El usuario ya existe" })
+    }
+
+    // Encriptar contraseña
+    const hashedPassword = await bcrypt.hash(contrasena, 10)
+
+    // Crear usuario
+    const result = await pool.query(
+      "INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4) RETURNING id, nombre, correo, telefono",
+      [nombre, correo, telefono, hashedPassword],
+    )
+
+    const user = result.rows[0]
+    const token = jwt.sign({ id: user.id, correo: user.correo }, JWT_SECRET, { expiresIn: "24h" })
+
+    res.status(201).json({
+      message: "Usuario creado exitosamente",
+      user: user,
+      token: token,
+      isAdmin: isAdmin(correo),
+    })
+  } catch (error) {
+    console.error("Error en registro:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
+  }
+})
+
+// Login de usuario
+app.post("/api/login", async (req, res) => {
+  try {
+    const { correo, contrasena } = req.body
+
+    // Buscar usuario
+    const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1", [correo])
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: "Credenciales incorrectas" })
+      return res.status(401).json({ error: "Credenciales inválidas" })
     }
 
-    const usuario = result.rows[0]
+    const user = result.rows[0]
 
-    // Para solicitudes de formulario tradicionales
-    if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
-      const redirectUrl = "https://hotelituss1.vercel.app/?logged=true"
-      return res.redirect(redirectUrl)
+    // Verificar contraseña
+    const validPassword = await bcrypt.compare(contrasena, user.contrasena)
+    if (!validPassword) {
+      return res.status(401).json({ error: "Credenciales inválidas" })
     }
 
-    // Para solicitudes JSON
-    return res.status(200).json({
-      success: true,
+    // Generar token
+    const token = jwt.sign({ id: user.id, correo: user.correo }, JWT_SECRET, { expiresIn: "24h" })
+
+    res.json({
       message: "Login exitoso",
       user: {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        correo: usuario.correo,
-        rol: 'usuario'
+        id: user.id,
+        nombre: user.nombre,
+        correo: user.correo,
+        telefono: user.telefono,
       },
-      isAdmin: false
+      token: token,
+      isAdmin: isAdmin(correo),
     })
   } catch (error) {
     console.error("Error en login:", error)
-    res.status(500).json({ message: "Error del servidor" })
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Middleware para verificar si el usuario es administrador (sin base de datos)
-const verificarAdmin = async (req, res, next) => {
-  try {
-    const { correo } = req.body
+// Rutas de habitaciones
 
-    if (!correo) {
-      return res.status(400).json({ success: false, message: "Correo no proporcionado" })
+// Obtener habitaciones disponibles
+app.get("/api/habitaciones", async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin, tipo } = req.query
+
+    let query = `
+            SELECT h.* FROM habitaciones h 
+            WHERE h.disponible = true
+        `
+    const params = []
+
+    // Filtrar por disponibilidad en fechas específicas
+    if (fecha_inicio && fecha_fin) {
+      query += ` AND h.id NOT IN (
+                SELECT r.habitacion_id FROM reservas r 
+                WHERE r.estado IN ('confirmada', 'pendiente') 
+                AND (r.fecha_inicio <= $${params.length + 2} AND r.fecha_fin >= $${params.length + 1})
+            )`
+      params.push(fecha_inicio, fecha_fin)
     }
 
-    if (!esAdministrador(correo)) {
-      return res.status(403).json({ success: false, message: "Acceso denegado. Se requieren permisos de administrador." })
+    // Filtrar por tipo
+    if (tipo) {
+      query += ` AND h.tipo = $${params.length + 1}`
+      params.push(tipo)
     }
 
-    next()
+    query += " ORDER BY h.numero"
+
+    const result = await pool.query(query, params)
+    res.json(result.rows)
   } catch (error) {
-    console.error("Error al verificar permisos de admin:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
-  }
-}
-
-// Endpoints de administración
-
-// Obtener todas las reservas (solo administradores)
-app.post("/admin/reservas", verificarAdmin, async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        r.id,
-        r.fecha_inicio,
-        r.fecha_fin,
-        r.estado,
-        r.huespedes,
-        r.solicitudes_especiales,
-        r.fecha_reserva,
-        u.nombre as usuario_nombre,
-        u.correo as usuario_correo,
-        u.telefono as usuario_telefono,
-        h.tipo as habitacion_tipo,
-        h.numero as habitacion_numero,
-        h.precio_por_noche
-      FROM reservas r
-      JOIN usuarios u ON r.usuario_id = u.id
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      ORDER BY r.fecha_reserva DESC
-    `
-
-    const result = await pool.query(query)
-
-    res.status(200).json({
-      success: true,
-      reservas: result.rows
-    })
-  } catch (error) {
-    console.error("Error al obtener reservas:", error)
-    res.status(500).json({ success: false, message: "Error al obtener las reservas" })
+    console.error("Error obteniendo habitaciones:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Obtener todos los huéspedes/usuarios (solo administradores)
-app.post("/admin/huespedes", verificarAdmin, async (req, res) => {
+// Rutas de reservas
+
+// Crear reserva
+app.post("/api/reservas", authenticateToken, async (req, res) => {
   try {
-    const query = `
-      SELECT 
-        u.id,
-        u.nombre,
-        u.correo,
-        u.telefono,
-        u.fecha_registro,
-        COUNT(r.id) as total_reservas,
-        MAX(r.fecha_reserva) as ultima_reserva,
-        CASE 
-          WHEN COUNT(r.id) > 0 THEN 'Activo'
-          ELSE 'Nuevo'
-        END as estado
-      FROM usuarios u
-      LEFT JOIN reservas r ON u.id = r.usuario_id
-      GROUP BY u.id, u.nombre, u.correo, u.telefono, u.fecha_registro
-      ORDER BY u.fecha_registro DESC
-    `
+    const { habitacion_id, fecha_inicio, fecha_fin, huespedes, solicitudes_especiales } = req.body
+    const usuario_id = req.user.id
 
-    const result = await pool.query(query)
+    // Verificar disponibilidad de la habitación
+    const habitacionDisponible = await pool.query(
+      `
+            SELECT h.* FROM habitaciones h 
+            WHERE h.id = $1 AND h.disponible = true
+            AND h.id NOT IN (
+                SELECT r.habitacion_id FROM reservas r 
+                WHERE r.estado IN ('confirmada', 'pendiente') 
+                AND (r.fecha_inicio <= $3 AND r.fecha_fin >= $2)
+            )
+        `,
+      [habitacion_id, fecha_inicio, fecha_fin],
+    )
 
-    res.status(200).json({
-      success: true,
-      huespedes: result.rows
+    if (habitacionDisponible.rows.length === 0) {
+      return res.status(400).json({ error: "La habitación no está disponible en las fechas seleccionadas" })
+    }
+
+    // Crear reserva
+    const result = await pool.query(
+      "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [usuario_id, habitacion_id, fecha_inicio, fecha_fin, "pendiente"],
+    )
+
+    const reserva = result.rows[0]
+
+    // Calcular monto total
+    const habitacion = habitacionDisponible.rows[0]
+    const fechaInicio = new Date(fecha_inicio)
+    const fechaFin = new Date(fecha_fin)
+    const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
+    const montoTotal = habitacion.precio_por_noche * noches
+
+    // Crear registro de pago pendiente
+    await pool.query("INSERT INTO pagos (reserva_id, monto, fecha_pago) VALUES ($1, $2, $3)", [
+      reserva.id,
+      montoTotal,
+      new Date(),
+    ])
+
+    res.status(201).json({
+      message: "Reserva creada exitosamente",
+      reserva: reserva,
+      monto_total: montoTotal,
+      noches: noches,
     })
   } catch (error) {
-    console.error("Error al obtener huéspedes:", error)
-    res.status(500).json({ success: false, message: "Error al obtener los huéspedes" })
+    console.error("Error creando reserva:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Obtener estadísticas del dashboard (solo administradores)
-app.post("/admin/estadisticas", verificarAdmin, async (req, res) => {
+// Obtener reservas del usuario
+app.get("/api/mis-reservas", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+            SELECT 
+                r.*,
+                h.tipo as habitacion_tipo,
+                h.numero as habitacion_numero,
+                h.precio_por_noche,
+                p.monto as monto_total
+            FROM reservas r
+            JOIN habitaciones h ON r.habitacion_id = h.id
+            LEFT JOIN pagos p ON r.id = p.reserva_id
+            WHERE r.usuario_id = $1
+            ORDER BY r.fecha_inicio DESC
+        `,
+      [req.user.id],
+    )
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Error obteniendo reservas del usuario:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
+  }
+})
+
+// Rutas de administración
+
+// Dashboard - Estadísticas generales
+app.get("/api/admin/dashboard", authenticateToken, requireAdmin, async (req, res) => {
   try {
     // Total de usuarios
     const totalUsuarios = await pool.query("SELECT COUNT(*) FROM usuarios")
-    
+
     // Total de reservas
     const totalReservas = await pool.query("SELECT COUNT(*) FROM reservas")
-    
-    // Reservas activas (confirmadas y pendientes)
-    const reservasActivas = await pool.query("SELECT COUNT(*) FROM reservas WHERE estado IN ('confirmada', 'pendiente', 'pendiente_pago')")
-    
+
+    // Reservas activas (confirmadas y en fechas futuras)
+    const reservasActivas = await pool.query(`
+            SELECT COUNT(*) FROM reservas 
+            WHERE estado = 'confirmada' AND fecha_fin >= CURRENT_DATE
+        `)
+
     // Ingresos del mes actual
     const ingresosMes = await pool.query(`
-      SELECT COALESCE(SUM(h.precio_por_noche * (r.fecha_fin - r.fecha_inicio)), 0) as ingresos
-      FROM reservas r
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      WHERE EXTRACT(MONTH FROM r.fecha_reserva) = EXTRACT(MONTH FROM CURRENT_DATE)
-      AND EXTRACT(YEAR FROM r.fecha_reserva) = EXTRACT(YEAR FROM CURRENT_DATE)
-      AND r.estado = 'confirmada'
-    `)
+            SELECT COALESCE(SUM(p.monto), 0) as total
+            FROM pagos p
+            JOIN reservas r ON p.reserva_id = r.id
+            WHERE EXTRACT(MONTH FROM p.fecha_pago) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM p.fecha_pago) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND r.estado = 'confirmada'
+        `)
 
-    res.status(200).json({
-      success: true,
-      estadisticas: {
-        totalUsuarios: parseInt(totalUsuarios.rows[0].count),
-        totalReservas: parseInt(totalReservas.rows[0].count),
-        reservasActivas: parseInt(reservasActivas.rows[0].count),
-        ingresosMes: parseFloat(ingresosMes.rows[0].ingresos) || 0
-      }
+    res.json({
+      totalUsuarios: Number.parseInt(totalUsuarios.rows[0].count),
+      totalReservas: Number.parseInt(totalReservas.rows[0].count),
+      reservasActivas: Number.parseInt(reservasActivas.rows[0].count),
+      ingresosMes: Number.parseFloat(ingresosMes.rows[0].total),
     })
   } catch (error) {
-    console.error("Error al obtener estadísticas:", error)
-    res.status(500).json({ success: false, message: "Error al obtener las estadísticas" })
+    console.error("Error obteniendo estadísticas:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Actualizar estado de reserva (solo administradores)
-app.post("/admin/actualizar-reserva", verificarAdmin, async (req, res) => {
+// Obtener todas las reservas (admin)
+app.get("/api/admin/reservas", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { reserva_id, nuevo_estado } = req.body
+    const result = await pool.query(`
+            SELECT 
+                r.*,
+                u.nombre as usuario_nombre,
+                u.correo as usuario_correo,
+                u.telefono as usuario_telefono,
+                h.tipo as habitacion_tipo,
+                h.numero as habitacion_numero,
+                h.precio_por_noche,
+                p.monto as monto_total
+            FROM reservas r
+            JOIN usuarios u ON r.usuario_id = u.id
+            JOIN habitaciones h ON r.habitacion_id = h.id
+            LEFT JOIN pagos p ON r.id = p.reserva_id
+            ORDER BY r.fecha_inicio DESC
+        `)
 
-    if (!reserva_id || !nuevo_estado) {
-      return res.status(400).json({ success: false, message: "Faltan datos requeridos" })
-    }
-
-    await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevo_estado, reserva_id])
-
-    res.status(200).json({
-      success: true,
-      message: "Estado de reserva actualizado correctamente"
-    })
+    res.json(result.rows)
   } catch (error) {
-    console.error("Error al actualizar reserva:", error)
-    res.status(500).json({ success: false, message: "Error al actualizar la reserva" })
+    console.error("Error obteniendo reservas:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Ruta para realizar reservas - CORREGIDA
-app.post("/reservar", async (req, res) => {
+// Actualizar estado de reserva (admin)
+app.put("/api/admin/reservas/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const {
-      usuario_id,
-      habitacion_id,
-      fecha_inicio,
-      fecha_fin,
-      estado,
-      nombre,
-      correo,
-      huespedes,
-      solicitudes_especiales,
-    } = req.body
+    const { id } = req.params
+    const { estado } = req.body
 
-    console.log("Datos de reserva recibidos:", req.body);
-    
-    let userId = usuario_id;
-
-    // Si no se proporciona usuario_id pero sí correo, buscar el usuario por correo
-    if (!userId && correo) {
-      console.log("Buscando usuario por correo:", correo);
-      const userResult = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo]);
-
-      if (userResult.rows.length > 0) {
-        userId = userResult.rows[0].id;
-        console.log("Usuario encontrado por correo, ID:", userId);
-      } else {
-        console.log("Usuario no encontrado, creando nuevo usuario con correo:", correo);
-        // Si el usuario no existe, crearlo
-        const newUserResult = await pool.query(
-          "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-          [nombre || "Usuario", correo, "password_temporal"]
-        );
-        userId = newUserResult.rows[0].id;
-        console.log("Nuevo usuario creado, ID:", userId);
-      }
-    }
-
-    if (!userId) {
-      console.error("No se pudo identificar al usuario");
-      return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" });
-    }
-
-    // Verificar disponibilidad de la habitación para las fechas solicitadas
-    console.log("Verificando disponibilidad de habitación ID:", habitacion_id, "para fechas:", fecha_inicio, "a", fecha_fin);
-    
-    // Primero verificamos que la habitación exista
-    const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1", [habitacion_id]);
-
-    if (habitacionResult.rows.length === 0) {
-      console.error("Habitación no encontrada");
-      return res.status(400).json({ success: false, message: "La habitación seleccionada no existe" });
-    }
-
-    // Verificar si hay reservas que se solapan con las fechas solicitadas
-    const reservasExistentes = await pool.query(
-      `SELECT * FROM reservas 
-       WHERE habitacion_id = $1 
-       AND estado != 'cancelada'
-       AND (
-         (fecha_inicio <= $2 AND fecha_fin >= $2) OR
-         (fecha_inicio <= $3 AND fecha_fin >= $3) OR
-         (fecha_inicio >= $2 AND fecha_fin <= $3)
-       )`,
-      [habitacion_id, fecha_inicio, fecha_fin]
-    );
-
-    if (reservasExistentes.rows.length > 0) {
-      console.error("Habitación no disponible para las fechas seleccionadas");
-      return res.status(400).json({ 
-        success: false, 
-        message: "La habitación seleccionada no está disponible para las fechas indicadas. Por favor, seleccione otras fechas o tipo de habitación." 
-      });
-    }
-
-    // Crear la reserva
-    console.log("Creando reserva con usuario_id:", userId, "habitacion_id:", habitacion_id);
-    const reservaResult = await pool.query(
-      "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado, huespedes, solicitudes_especiales) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-      [userId, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente", huespedes, solicitudes_especiales]
-    );
-
-    const reservaId = reservaResult.rows[0].id;
-    console.log("Reserva creada con ID:", reservaId);
-
-    res.status(200).json({
-      success: true,
-      message: "Reserva creada con éxito",
-      reserva_id: reservaId,
-    });
-  } catch (error) {
-    console.error("Error detallado al crear reserva:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Error al procesar la reserva", 
-      error: error.message 
-    });
-  }
-})
-
-// Ruta para obtener las reservas de un usuario
-app.post("/user-reservations", async (req, res) => {
-  try {
-    const { usuario_id, correo } = req.body
-
-    let query
-    let params
-
-    if (usuario_id) {
-      query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
-        FROM reservas r
-        JOIN habitaciones h ON r.habitacion_id = h.id
-        WHERE r.usuario_id = $1
-        ORDER BY r.fecha_inicio DESC
-      `
-      params = [usuario_id]
-    } else if (correo) {
-      query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
-        FROM reservas r
-        JOIN habitaciones h ON r.habitacion_id = h.id
-        JOIN usuarios u ON r.usuario_id = u.id
-        WHERE u.correo = $1
-        ORDER BY r.fecha_inicio DESC
-      `
-      params = [correo]
-    } else {
-      return res.status(400).json({ success: false, message: "Se requiere ID de usuario o correo" })
-    }
-
-    const result = await pool.query(query, params)
-
-    res.status(200).json({
-      success: true,
-      reservas: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener reservas:", error)
-    res.status(500).json({ success: false, message: "Error al obtener las reservas" })
-  }
-})
-
-// Ruta para cancelar una reserva
-app.post("/cancel-reservation", async (req, res) => {
-  try {
-    const { id } = req.body
-
-    if (!id) {
-      return res.status(400).json({ success: false, message: "ID de reserva no proporcionado" })
-    }
-
-    // Obtener información de la reserva
-    const reservaResult = await pool.query("SELECT habitacion_id FROM reservas WHERE id = $1", [id])
-
-    if (reservaResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Reserva no encontrada" })
-    }
-
-    const habitacionId = reservaResult.rows[0].habitacion_id
-
-    // Actualizar estado de la reserva
-    await pool.query("UPDATE reservas SET estado = 'cancelada' WHERE id = $1", [id])
-
-    res.status(200).json({
-      success: true,
-      message: "Reserva cancelada con éxito",
-    })
-  } catch (error) {
-    console.error("Error al cancelar reserva:", error)
-    res.status(500).json({ success: false, message: "Error al cancelar la reserva" })
-  }
-})
-
-// Ruta para obtener datos del usuario
-app.post("/get-user-data", async (req, res) => {
-  try {
-    const { correo } = req.body
-
-    if (!correo) {
-      return res.status(400).json({ success: false, message: "Correo no proporcionado" })
-    }
-
-    // Verificar si es administrador
-    if (esAdministrador(correo)) {
-      return res.status(200).json({
-        success: true,
-        user: {
-          id: 999,
-          nombre: "Administrador",
-          correo: correo,
-          telefono: "N/A",
-          rol: "administrador"
-        },
-      })
-    }
-
-    const result = await pool.query("SELECT id, nombre, correo, telefono FROM usuarios WHERE correo = $1", [correo])
+    const result = await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2 RETURNING *", [estado, id])
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Usuario no encontrado" })
+      return res.status(404).json({ error: "Reserva no encontrada" })
     }
 
-    res.status(200).json({
-      success: true,
-      user: result.rows[0],
+    res.json({
+      message: "Estado de reserva actualizado",
+      reserva: result.rows[0],
     })
   } catch (error) {
-    console.error("Error al obtener datos del usuario:", error)
-    res.status(500).json({ success: false, message: "Error del servidor" })
+    console.error("Error actualizando reserva:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Inicializar habitaciones si no existen
-app.get("/init-habitaciones", async (req, res) => {
+// Obtener todos los usuarios (admin)
+app.get("/api/admin/usuarios", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    // Verificar si ya existen habitaciones
-    const checkResult = await pool.query("SELECT COUNT(*) FROM habitaciones")
+    const result = await pool.query(
+      `
+            SELECT 
+                u.*,
+                COUNT(r.id) as total_reservas,
+                MAX(r.fecha_inicio) as ultima_reserva,
+                CASE 
+                    WHEN COUNT(r.id) > 0 THEN 'activo'
+                    ELSE 'inactivo'
+                END as estado
+            FROM usuarios u
+            LEFT JOIN reservas r ON u.id = r.usuario_id
+            WHERE u.correo NOT IN (${adminEmails.map((_, i) => `$${i + 1}`).join(", ")})
+            GROUP BY u.id, u.nombre, u.correo, u.telefono, u.contrasena
+            ORDER BY u.nombre
+        `,
+      adminEmails,
+    )
 
-    if (Number.parseInt(checkResult.rows[0].count) > 0) {
-      return res.status(200).json({ message: "Las habitaciones ya están inicializadas" })
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Error obteniendo usuarios:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
+  }
+})
+
+// Obtener habitaciones (admin)
+app.get("/api/admin/habitaciones", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM habitaciones ORDER BY numero")
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Error obteniendo habitaciones:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
+  }
+})
+
+// Actualizar habitación (admin)
+app.put("/api/admin/habitaciones/:id", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tipo, numero, precio_por_noche, disponible } = req.body
+
+    const result = await pool.query(
+      "UPDATE habitaciones SET tipo = $1, numero = $2, precio_por_noche = $3, disponible = $4 WHERE id = $5 RETURNING *",
+      [tipo, numero, precio_por_noche, disponible, id],
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Habitación no encontrada" })
     }
 
-    // Crear habitaciones iniciales
-    await pool.query(`
-      INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES
-      ('individual', 101, 120, true),
-      ('individual', 102, 120, true),
-      ('individual', 103, 120, true),
-      ('doble', 201, 180, true),
-      ('doble', 202, 180, true),
-      ('doble', 203, 180, true),
-      ('suite', 301, 280, true),
-      ('suite', 302, 280, true)
-    `)
-
-    res.status(200).json({ success: true, message: "Habitaciones inicializadas correctamente" })
+    res.json({
+      message: "Habitación actualizada",
+      habitacion: result.rows[0],
+    })
   } catch (error) {
-    console.error("Error al inicializar habitaciones:", error)
-    res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
+    console.error("Error actualizando habitación:", error)
+    res.status(500).json({ error: "Error interno del servidor" })
   }
 })
 
-// Ruta para verificar el estado del servidor
-app.get("/status", (req, res) => {
-  res.status(200).json({ status: "ok", message: "Servidor funcionando correctamente" })
+// Ruta de prueba
+app.get("/api/test", (req, res) => {
+  res.json({ message: "API funcionando correctamente" })
 })
 
-pool
-  .connect()
-  .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
-  .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
-
-app.listen(3000)
-console.log("server on port ", 3000)
+// Inicializar datos y arrancar servidor
+initializeData().then(() => {
+  app.listen(port, () => {
+    console.log(`Servidor corriendo en http://localhost:${port}`)
+    console.log("Credenciales de administrador:")
+    adminEmails.forEach((email) => {
+      console.log(`- Email: ${email}, Contraseña: admin123`)
+    })
+  })
+})
