@@ -4,28 +4,17 @@ import pg from "pg"
 import cors from "cors"
 import crypto from "crypto"
 import nodemailer from "nodemailer"
-import { MercadoPagoConfig, Preference } from "mercadopago"
 
 import path from "path"
 import { fileURLToPath } from "url"
 
 config()
 
-// Access Token de prueba directamente en el código
-const MERCADOPAGO_ACCESS_TOKEN = "APP_USR-4042032952455773-052221-e12625a5c331428f07fc27d2e0a5cb66-2452456537"
-
-console.log("✅ MercadoPago configurado correctamente con Access Token de prueba")
-
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
 const usuariosPendientes = {}
-
-// Configurar MercadoPago
-const client = new MercadoPagoConfig({
-  accessToken: MERCADOPAGO_ACCESS_TOKEN,
-})
 
 //usar cors para validar datos a traves de las paginas
 app.use(
@@ -59,7 +48,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
@@ -115,6 +104,18 @@ app.post("/verify-code", async (req, res) => {
   res.json({ success: true })
 })
 
+// Lista de administradores predefinidos (sin cambiar la base de datos)
+const ADMINISTRADORES = [
+  'admin@hotelituss.com',
+  'gerente@hotelituss.com',
+  'administrador@hotelituss.com'
+]
+
+// Función para verificar si un usuario es administrador
+function esAdministrador(correo) {
+  return ADMINISTRADORES.includes(correo.toLowerCase())
+}
+
 //iniciar sesion
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
@@ -130,6 +131,34 @@ app.post("/sesion", async (req, res) => {
 
     console.log(`Buscando usuario con email: ${email}`)
 
+    // Verificar si es un administrador con credenciales especiales
+    if (esAdministrador(email)) {
+      // Credenciales especiales para administradores
+      if (password === 'admin123' || password === 'gerente2024') {
+        console.log("Login de administrador exitoso")
+        
+        // Para solicitudes de formulario tradicionales
+        if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
+          const redirectUrl = "https://hotelituss1.vercel.app/?logged=true&admin=true"
+          return res.redirect(redirectUrl)
+        }
+
+        // Para solicitudes JSON
+        return res.status(200).json({
+          success: true,
+          message: "Login de administrador exitoso",
+          user: {
+            id: 999, // ID especial para admin
+            nombre: "Administrador",
+            correo: email,
+            rol: 'administrador'
+          },
+          isAdmin: true
+        })
+      }
+    }
+
+    // Login normal para usuarios regulares
     const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
 
     console.log("Resultado de búsqueda:", result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado")
@@ -138,9 +167,12 @@ app.post("/sesion", async (req, res) => {
       return res.status(401).json({ message: "Credenciales incorrectas" })
     }
 
+    const usuario = result.rows[0]
+
     // Para solicitudes de formulario tradicionales
     if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
-      return res.redirect("https://hotelituss1.vercel.app/?logged=true")
+      const redirectUrl = "https://hotelituss1.vercel.app/?logged=true"
+      return res.redirect(redirectUrl)
     }
 
     // Para solicitudes JSON
@@ -148,10 +180,12 @@ app.post("/sesion", async (req, res) => {
       success: true,
       message: "Login exitoso",
       user: {
-        id: result.rows[0].id,
-        nombre: result.rows[0].nombre,
-        correo: result.rows[0].correo,
+        id: usuario.id,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: 'usuario'
       },
+      isAdmin: false
     })
   } catch (error) {
     console.error("Error en login:", error)
@@ -159,65 +193,157 @@ app.post("/sesion", async (req, res) => {
   }
 })
 
-// Función para calcular el precio total de la reserva usando precios de la base de datos
-async function calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin) {
+// Middleware para verificar si el usuario es administrador (sin base de datos)
+const verificarAdmin = async (req, res, next) => {
   try {
-    // Obtener el precio real de la base de datos
-    const habitacionResult = await pool.query("SELECT precio_por_noche, tipo FROM habitaciones WHERE id = $1", [
-      habitacion_id,
-    ])
+    const { correo } = req.body
 
-    if (habitacionResult.rows.length === 0) {
-      console.error("Habitación no encontrada para cálculo de precio")
-      return 0
+    if (!correo) {
+      return res.status(400).json({ success: false, message: "Correo no proporcionado" })
     }
 
-    const precioPorNoche = habitacionResult.rows[0].precio_por_noche
-    const tipoHabitacion = habitacionResult.rows[0].tipo
+    if (!esAdministrador(correo)) {
+      return res.status(403).json({ success: false, message: "Acceso denegado. Se requieren permisos de administrador." })
+    }
 
-    const fechaInicio = new Date(fecha_inicio)
-    const fechaFin = new Date(fecha_fin)
-    const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
-
-    const precioTotal = noches * precioPorNoche
-
-    console.log(`Cálculo de precio:`)
-    console.log(`- Habitación: ${tipoHabitacion} (ID: ${habitacion_id})`)
-    console.log(`- Precio por noche: $${precioPorNoche} ARS`)
-    console.log(`- Número de noches: ${noches}`)
-    console.log(`- Precio total: $${precioTotal} ARS`)
-
-    return precioTotal
+    next()
   } catch (error) {
-    console.error("Error al calcular precio:", error)
-    return 0
+    console.error("Error al verificar permisos de admin:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
   }
 }
 
-// Función para registrar el pago en la tabla pagos
-async function registrarPago(reserva_id, monto) {
+// Endpoints de administración
+
+// Obtener todas las reservas (solo administradores)
+app.post("/admin/reservas", verificarAdmin, async (req, res) => {
   try {
-    const fechaActual = new Date().toISOString().split("T")[0] // Formato YYYY-MM-DD
+    const query = `
+      SELECT 
+        r.id,
+        r.fecha_inicio,
+        r.fecha_fin,
+        r.estado,
+        r.huespedes,
+        r.solicitudes_especiales,
+        r.fecha_reserva,
+        u.nombre as usuario_nombre,
+        u.correo as usuario_correo,
+        u.telefono as usuario_telefono,
+        h.tipo as habitacion_tipo,
+        h.numero as habitacion_numero,
+        h.precio_por_noche
+      FROM reservas r
+      JOIN usuarios u ON r.usuario_id = u.id
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      ORDER BY r.fecha_reserva DESC
+    `
 
-    const result = await pool.query(
-      "INSERT INTO pagos (reserva_id, monto, fecha_pago) VALUES ($1, $2, $3) RETURNING id",
-      [reserva_id, monto, fechaActual],
-    )
+    const result = await pool.query(query)
 
-    console.log(`✅ Pago registrado en tabla pagos:`)
-    console.log(`- ID Pago: ${result.rows[0].id}`)
-    console.log(`- Reserva ID: ${reserva_id}`)
-    console.log(`- Monto: $${monto} ARS`)
-    console.log(`- Fecha: ${fechaActual}`)
-
-    return result.rows[0].id
+    res.status(200).json({
+      success: true,
+      reservas: result.rows
+    })
   } catch (error) {
-    console.error("❌ Error al registrar pago:", error)
-    throw error
+    console.error("Error al obtener reservas:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las reservas" })
   }
-}
+})
 
-// Ruta para realizar reservas - MODIFICADA PARA MERCADOPAGO
+// Obtener todos los huéspedes/usuarios (solo administradores)
+app.post("/admin/huespedes", verificarAdmin, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id,
+        u.nombre,
+        u.correo,
+        u.telefono,
+        u.fecha_registro,
+        COUNT(r.id) as total_reservas,
+        MAX(r.fecha_reserva) as ultima_reserva,
+        CASE 
+          WHEN COUNT(r.id) > 0 THEN 'Activo'
+          ELSE 'Nuevo'
+        END as estado
+      FROM usuarios u
+      LEFT JOIN reservas r ON u.id = r.usuario_id
+      GROUP BY u.id, u.nombre, u.correo, u.telefono, u.fecha_registro
+      ORDER BY u.fecha_registro DESC
+    `
+
+    const result = await pool.query(query)
+
+    res.status(200).json({
+      success: true,
+      huespedes: result.rows
+    })
+  } catch (error) {
+    console.error("Error al obtener huéspedes:", error)
+    res.status(500).json({ success: false, message: "Error al obtener los huéspedes" })
+  }
+})
+
+// Obtener estadísticas del dashboard (solo administradores)
+app.post("/admin/estadisticas", verificarAdmin, async (req, res) => {
+  try {
+    // Total de usuarios
+    const totalUsuarios = await pool.query("SELECT COUNT(*) FROM usuarios")
+    
+    // Total de reservas
+    const totalReservas = await pool.query("SELECT COUNT(*) FROM reservas")
+    
+    // Reservas activas (confirmadas y pendientes)
+    const reservasActivas = await pool.query("SELECT COUNT(*) FROM reservas WHERE estado IN ('confirmada', 'pendiente', 'pendiente_pago')")
+    
+    // Ingresos del mes actual
+    const ingresosMes = await pool.query(`
+      SELECT COALESCE(SUM(h.precio_por_noche * (r.fecha_fin - r.fecha_inicio)), 0) as ingresos
+      FROM reservas r
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      WHERE EXTRACT(MONTH FROM r.fecha_reserva) = EXTRACT(MONTH FROM CURRENT_DATE)
+      AND EXTRACT(YEAR FROM r.fecha_reserva) = EXTRACT(YEAR FROM CURRENT_DATE)
+      AND r.estado = 'confirmada'
+    `)
+
+    res.status(200).json({
+      success: true,
+      estadisticas: {
+        totalUsuarios: parseInt(totalUsuarios.rows[0].count),
+        totalReservas: parseInt(totalReservas.rows[0].count),
+        reservasActivas: parseInt(reservasActivas.rows[0].count),
+        ingresosMes: parseFloat(ingresosMes.rows[0].ingresos) || 0
+      }
+    })
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error)
+    res.status(500).json({ success: false, message: "Error al obtener las estadísticas" })
+  }
+})
+
+// Actualizar estado de reserva (solo administradores)
+app.post("/admin/actualizar-reserva", verificarAdmin, async (req, res) => {
+  try {
+    const { reserva_id, nuevo_estado } = req.body
+
+    if (!reserva_id || !nuevo_estado) {
+      return res.status(400).json({ success: false, message: "Faltan datos requeridos" })
+    }
+
+    await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevo_estado, reserva_id])
+
+    res.status(200).json({
+      success: true,
+      message: "Estado de reserva actualizado correctamente"
+    })
+  } catch (error) {
+    console.error("Error al actualizar reserva:", error)
+    res.status(500).json({ success: false, message: "Error al actualizar la reserva" })
+  }
+})
+
+// Ruta para realizar reservas - CORREGIDA
 app.post("/reservar", async (req, res) => {
   try {
     const {
@@ -232,51 +358,44 @@ app.post("/reservar", async (req, res) => {
       solicitudes_especiales,
     } = req.body
 
-    console.log("Datos de reserva recibidos:", req.body)
-
-    let userId = usuario_id
+    console.log("Datos de reserva recibidos:", req.body);
+    
+    let userId = usuario_id;
 
     // Si no se proporciona usuario_id pero sí correo, buscar el usuario por correo
     if (!userId && correo) {
-      console.log("Buscando usuario por correo:", correo)
-      const userResult = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo])
+      console.log("Buscando usuario por correo:", correo);
+      const userResult = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [correo]);
 
       if (userResult.rows.length > 0) {
-        userId = userResult.rows[0].id
-        console.log("Usuario encontrado por correo, ID:", userId)
+        userId = userResult.rows[0].id;
+        console.log("Usuario encontrado por correo, ID:", userId);
       } else {
-        console.log("Usuario no encontrado, creando nuevo usuario con correo:", correo)
+        console.log("Usuario no encontrado, creando nuevo usuario con correo:", correo);
         // Si el usuario no existe, crearlo
         const newUserResult = await pool.query(
           "INSERT INTO usuarios (nombre, correo, contrasena) VALUES ($1, $2, $3) RETURNING id",
-          [nombre || "Usuario", correo, "password_temporal"],
-        )
-        userId = newUserResult.rows[0].id
-        console.log("Nuevo usuario creado, ID:", userId)
+          [nombre || "Usuario", correo, "password_temporal"]
+        );
+        userId = newUserResult.rows[0].id;
+        console.log("Nuevo usuario creado, ID:", userId);
       }
     }
 
     if (!userId) {
-      console.error("No se pudo identificar al usuario")
-      return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" })
+      console.error("No se pudo identificar al usuario");
+      return res.status(400).json({ success: false, message: "No se pudo identificar al usuario" });
     }
 
     // Verificar disponibilidad de la habitación para las fechas solicitadas
-    console.log(
-      "Verificando disponibilidad de habitación ID:",
-      habitacion_id,
-      "para fechas:",
-      fecha_inicio,
-      "a",
-      fecha_fin,
-    )
-
+    console.log("Verificando disponibilidad de habitación ID:", habitacion_id, "para fechas:", fecha_inicio, "a", fecha_fin);
+    
     // Primero verificamos que la habitación exista
-    const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1", [habitacion_id])
+    const habitacionResult = await pool.query("SELECT * FROM habitaciones WHERE id = $1", [habitacion_id]);
 
     if (habitacionResult.rows.length === 0) {
-      console.error("Habitación no encontrada")
-      return res.status(400).json({ success: false, message: "La habitación seleccionada no existe" })
+      console.error("Habitación no encontrada");
+      return res.status(400).json({ success: false, message: "La habitación seleccionada no existe" });
     }
 
     // Verificar si hay reservas que se solapan con las fechas solicitadas
@@ -289,180 +408,43 @@ app.post("/reservar", async (req, res) => {
          (fecha_inicio <= $3 AND fecha_fin >= $3) OR
          (fecha_inicio >= $2 AND fecha_fin <= $3)
        )`,
-      [habitacion_id, fecha_inicio, fecha_fin],
-    )
+      [habitacion_id, fecha_inicio, fecha_fin]
+    );
 
     if (reservasExistentes.rows.length > 0) {
-      console.error("Habitación no disponible para las fechas seleccionadas")
-      return res.status(400).json({
-        success: false,
-        message:
-          "La habitación seleccionada no está disponible para las fechas indicadas. Por favor, seleccione otras fechas o tipo de habitación.",
-      })
+      console.error("Habitación no disponible para las fechas seleccionadas");
+      return res.status(400).json({ 
+        success: false, 
+        message: "La habitación seleccionada no está disponible para las fechas indicadas. Por favor, seleccione otras fechas o tipo de habitación." 
+      });
     }
 
-    // Crear la reserva con estado "pendiente_pago"
-    console.log("Creando reserva con usuario_id:", userId, "habitacion_id:", habitacion_id)
+    // Crear la reserva
+    console.log("Creando reserva con usuario_id:", userId, "habitacion_id:", habitacion_id);
     const reservaResult = await pool.query(
-      "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-      [userId, habitacion_id, fecha_inicio, fecha_fin, "pendiente_pago"],
-    )
+      "INSERT INTO reservas (usuario_id, habitacion_id, fecha_inicio, fecha_fin, estado, huespedes, solicitudes_especiales) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+      [userId, habitacion_id, fecha_inicio, fecha_fin, estado || "pendiente", huespedes, solicitudes_especiales]
+    );
 
-    const reservaId = reservaResult.rows[0].id
-    console.log("Reserva creada con ID:", reservaId)
-
-    // Calcular el precio total usando los precios reales de la base de datos
-    const precioTotal = await calcularPrecioReserva(habitacion_id, fecha_inicio, fecha_fin)
-
-    if (precioTotal === 0) {
-      return res.status(400).json({ success: false, message: "Error al calcular el precio de la reserva" })
-    }
-
-    // Crear preferencia de MercadoPago
-    const preference = new Preference(client)
-
-    const tiposHabitacion = {
-      1: "Habitación Individual",
-      2: "Habitación Doble",
-      3: "Suite Ejecutiva",
-    }
-
-    const preferenceData = {
-      items: [
-        {
-          title: `Reserva ${tiposHabitacion[habitacion_id]} - Hotelituss`,
-          description: `Reserva del ${fecha_inicio} al ${fecha_fin}`,
-          quantity: 1,
-          currency_id: "ARS", // PESOS ARGENTINOS
-          unit_price: precioTotal,
-        },
-      ],
-      payer: {
-        name: nombre,
-        email: correo,
-      },
-      back_urls: {
-        success: `https://hotelituss-test.vercel.app//?payment=success&reserva_id=${reservaId}`,
-        failure: `https://hotelituss-test.vercel.app//?payment=failure&reserva_id=${reservaId}`,
-        pending: `https://hotelituss-test.vercel.app//?payment=pending&reserva_id=${reservaId}`,
-      },
-      auto_return: "approved",
-      external_reference: reservaId.toString(),
-      notification_url: `https://hotelitus.onrender.com/webhook-mercadopago`,
-      metadata: {
-        reserva_id: reservaId,
-        monto: precioTotal,
-      },
-    }
-
-    console.log("Creando preferencia de MercadoPago con datos:", JSON.stringify(preferenceData, null, 2))
-
-    const result = await preference.create({ body: preferenceData })
-
-    console.log("Preferencia creada exitosamente:", result.id)
-
-    // Guardar el preference_id en la reserva
-    await pool.query("UPDATE reservas SET preference_id = $1 WHERE id = $2", [result.id, reservaId])
+    const reservaId = reservaResult.rows[0].id;
+    console.log("Reserva creada con ID:", reservaId);
 
     res.status(200).json({
       success: true,
       message: "Reserva creada con éxito",
       reserva_id: reservaId,
-      payment_url: result.init_point, // URL para redirigir al usuario a MercadoPago
-      preference_id: result.id,
-      precio_total: precioTotal,
-      precio_formateado: `$${precioTotal} ARS`,
-    })
+    });
   } catch (error) {
-    console.error("Error detallado al crear reserva:", error)
-    res.status(500).json({
-      success: false,
-      message: "Error al procesar la reserva",
-      error: error.message,
-    })
+    console.error("Error detallado al crear reserva:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error al procesar la reserva", 
+      error: error.message 
+    });
   }
 })
 
-// Webhook para recibir notificaciones de MercadoPago
-app.post("/webhook-mercadopago", async (req, res) => {
-  try {
-    console.log("Webhook recibido:", req.body)
-    const { type, data } = req.body
-
-    if (type === "payment") {
-      const paymentId = data.id
-      console.log("Notificación de pago recibida, ID:", paymentId)
-
-      // Aquí deberías verificar el pago con la API de MercadoPago
-      // Por simplicidad en pruebas, asumimos que el pago fue exitoso
-      console.log("Procesando pago:", paymentId)
-    }
-
-    res.status(200).send("OK")
-  } catch (error) {
-    console.error("Error en webhook:", error)
-    res.status(500).send("Error")
-  }
-})
-
-// Endpoint para manejar el retorno de MercadoPago - ACTUALIZADO PARA REGISTRAR PAGOS
-app.post("/payment-result", async (req, res) => {
-  try {
-    const { payment_status, reserva_id } = req.body
-
-    console.log("Procesando resultado de pago:", { payment_status, reserva_id })
-
-    let nuevoEstado
-    if (payment_status === "success" || payment_status === "approved") {
-      nuevoEstado = "confirmada"
-    } else if (payment_status === "failure" || payment_status === "rejected") {
-      nuevoEstado = "cancelada"
-    } else {
-      nuevoEstado = "pendiente"
-    }
-
-    // Actualizar el estado de la reserva
-    await pool.query("UPDATE reservas SET estado = $1 WHERE id = $2", [nuevoEstado, reserva_id])
-
-    console.log(`Reserva ${reserva_id} actualizada a estado: ${nuevoEstado}`)
-
-    // Si el pago fue exitoso, registrarlo en la tabla pagos
-    if (nuevoEstado === "confirmada") {
-      try {
-        // Obtener el monto de la reserva
-        const reservaResult = await pool.query(
-          `
-          SELECT r.*, h.precio_por_noche 
-          FROM reservas r 
-          JOIN habitaciones h ON r.habitacion_id = h.id 
-          WHERE r.id = $1
-        `,
-          [reserva_id],
-        )
-
-        if (reservaResult.rows.length > 0) {
-          const reserva = reservaResult.rows[0]
-          const monto = await calcularPrecioReserva(reserva.habitacion_id, reserva.fecha_inicio, reserva.fecha_fin)
-
-          // Registrar el pago en la tabla pagos
-          const pagoId = await registrarPago(reserva_id, monto)
-
-          console.log(`✅ Pago confirmado y registrado con ID: ${pagoId}`)
-        }
-      } catch (error) {
-        console.error("❌ Error al registrar pago, pero reserva confirmada:", error)
-        // No fallar la respuesta aunque el registro del pago falle
-      }
-    }
-
-    res.json({ success: true, estado: nuevoEstado })
-  } catch (error) {
-    console.error("Error al actualizar estado de reserva:", error)
-    res.status(500).json({ success: false, message: "Error al actualizar reserva" })
-  }
-})
-
-// Ruta para obtener las reservas de un usuario CON INFORMACIÓN DE PAGOS
+// Ruta para obtener las reservas de un usuario
 app.post("/user-reservations", async (req, res) => {
   try {
     const { usuario_id, correo } = req.body
@@ -472,23 +454,19 @@ app.post("/user-reservations", async (req, res) => {
 
     if (usuario_id) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
-               p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
-        LEFT JOIN pagos p ON r.id = p.reserva_id
         WHERE r.usuario_id = $1
         ORDER BY r.fecha_inicio DESC
       `
       params = [usuario_id]
     } else if (correo) {
       query = `
-        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche,
-               p.id as pago_id, p.monto as monto_pagado, p.fecha_pago
+        SELECT r.*, h.tipo as habitacion_tipo, h.precio_por_noche
         FROM reservas r
         JOIN habitaciones h ON r.habitacion_id = h.id
         JOIN usuarios u ON r.usuario_id = u.id
-        LEFT JOIN pagos p ON r.id = p.reserva_id
         WHERE u.correo = $1
         ORDER BY r.fecha_inicio DESC
       `
@@ -506,28 +484,6 @@ app.post("/user-reservations", async (req, res) => {
   } catch (error) {
     console.error("Error al obtener reservas:", error)
     res.status(500).json({ success: false, message: "Error al obtener las reservas" })
-  }
-})
-
-// Nueva ruta para obtener todos los pagos
-app.get("/pagos", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT p.*, r.fecha_inicio, r.fecha_fin, h.tipo as habitacion_tipo, u.nombre as cliente_nombre
-      FROM pagos p
-      JOIN reservas r ON p.reserva_id = r.id
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      JOIN usuarios u ON r.usuario_id = u.id
-      ORDER BY p.fecha_pago DESC
-    `)
-
-    res.status(200).json({
-      success: true,
-      pagos: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener pagos:", error)
-    res.status(500).json({ success: false, message: "Error al obtener los pagos" })
   }
 })
 
@@ -571,6 +527,20 @@ app.post("/get-user-data", async (req, res) => {
       return res.status(400).json({ success: false, message: "Correo no proporcionado" })
     }
 
+    // Verificar si es administrador
+    if (esAdministrador(correo)) {
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: 999,
+          nombre: "Administrador",
+          correo: correo,
+          telefono: "N/A",
+          rol: "administrador"
+        },
+      })
+    }
+
     const result = await pool.query("SELECT id, nombre, correo, telefono FROM usuarios WHERE correo = $1", [correo])
 
     if (result.rows.length === 0) {
@@ -587,34 +557,39 @@ app.post("/get-user-data", async (req, res) => {
   }
 })
 
-// Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
+// Inicializar habitaciones si no existen
 app.get("/init-habitaciones", async (req, res) => {
   try {
-    // Verificar habitaciones existentes
-    const checkResult = await pool.query("SELECT * FROM habitaciones ORDER BY id")
+    // Verificar si ya existen habitaciones
+    const checkResult = await pool.query("SELECT COUNT(*) FROM habitaciones")
 
-    res.status(200).json({
-      success: true,
-      message: "Habitaciones existentes en la base de datos",
-      habitaciones: checkResult.rows,
-    })
+    if (Number.parseInt(checkResult.rows[0].count) > 0) {
+      return res.status(200).json({ message: "Las habitaciones ya están inicializadas" })
+    }
+
+    // Crear habitaciones iniciales
+    await pool.query(`
+      INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES
+      ('individual', 101, 120, true),
+      ('individual', 102, 120, true),
+      ('individual', 103, 120, true),
+      ('doble', 201, 180, true),
+      ('doble', 202, 180, true),
+      ('doble', 203, 180, true),
+      ('suite', 301, 280, true),
+      ('suite', 302, 280, true)
+    `)
+
+    res.status(200).json({ success: true, message: "Habitaciones inicializadas correctamente" })
   } catch (error) {
-    console.error("Error al consultar habitaciones:", error)
-    res.status(500).json({ success: false, message: "Error al consultar habitaciones" })
+    console.error("Error al inicializar habitaciones:", error)
+    res.status(500).json({ success: false, message: "Error al inicializar habitaciones" })
   }
 })
 
 // Ruta para verificar el estado del servidor
 app.get("/status", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "Servidor funcionando correctamente",
-    mercadopago: "configurado",
-    currency: "ARS",
-    precios_desde_db: true,
-    tabla_pagos: "habilitada",
-    timestamp: new Date().toISOString(),
-  })
+  res.status(200).json({ status: "ok", message: "Servidor funcionando correctamente" })
 })
 
 pool
@@ -623,5 +598,4 @@ pool
   .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
 
 app.listen(3000)
-console.log("🚀 Servidor iniciado en puerto 3000")
-console.log("💳 MercadoPago configurado con Access Token de prueba")
+console.log("server on port ", 3000)
