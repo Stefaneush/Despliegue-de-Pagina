@@ -5,6 +5,7 @@ import cors from "cors"
 import crypto from "crypto"
 import nodemailer from "nodemailer"
 import { MercadoPagoConfig, Preference } from "mercadopago"
+
 import path from "path"
 import { fileURLToPath } from "url"
 
@@ -16,7 +17,7 @@ const MERCADOPAGO_ACCESS_TOKEN = "APP_USR-4042032952455773-052221-e12625a5c33142
 console.log("✅ MercadoPago configurado correctamente con Access Token de prueba")
 
 const __filename = fileURLToPath(import.meta.url)
-const _dirname = path.dirname(__filename)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const usuariosPendientes = {}
@@ -25,61 +26,6 @@ const usuariosPendientes = {}
 const client = new MercadoPagoConfig({
   accessToken: MERCADOPAGO_ACCESS_TOKEN,
 })
-
-// ==================== CONFIGURACIÓN DE ADMINISTRADORES ====================
-// Lista de correos que serán considerados administradores
-const ADMIN_EMAILS = [
-  "admin@hotelituss.com",
-  "gerente@hotelituss.com",
-  "administrador@hotelituss.com",
-  "manager@hotelituss.com",
-]
-
-// Función para verificar si un correo es de administrador
-function isAdminEmail(email) {
-  return ADMIN_EMAILS.includes(email.toLowerCase()) || email.toLowerCase().endsWith("@admin.hotelituss.com")
-}
-
-// Función para crear administradores por defecto
-async function crearAdministradoresDefault() {
-  try {
-    const administradores = [
-      {
-        nombre: "Administrador Principal",
-        correo: "admin@hotelituss.com",
-        telefono: "2614237890",
-        contrasena: "admin123",
-      },
-      {
-        nombre: "Gerente Hotel",
-        correo: "gerente@hotelituss.com",
-        telefono: "2614237891",
-        contrasena: "gerente123",
-      },
-    ]
-
-    for (const admin of administradores) {
-      // Verificar si ya existe
-      const existeAdmin = await pool.query("SELECT id FROM usuarios WHERE correo = $1", [admin.correo])
-
-      if (existeAdmin.rows.length === 0) {
-        await pool.query("INSERT INTO usuarios (nombre, correo, telefono, contrasena) VALUES ($1, $2, $3, $4)", [
-          admin.nombre,
-          admin.correo,
-          admin.telefono,
-          admin.contrasena,
-        ])
-        console.log(`✅ Administrador creado: ${admin.correo}`)
-      }
-    }
-
-    console.log("📋 Cuentas de administrador disponibles:")
-    console.log("   - admin@hotelituss.com / admin123")
-    console.log("   - gerente@hotelituss.com / gerente123")
-  } catch (error) {
-    console.error("❌ Error al crear administradores por defecto:", error)
-  }
-}
 
 //usar cors para validar datos a traves de las paginas
 app.use(
@@ -102,193 +48,7 @@ const pool = new pg.Pool({
 })
 
 app.get("/", async (req, res) => {
-  res.sendFile(path.join(_dirname, "public", "index.html"))
-})
-
-// Función para inicializar habitaciones por defecto
-async function inicializarHabitaciones() {
-  try {
-    const habitacionesCheck = await pool.query("SELECT COUNT(*) FROM habitaciones")
-    const habitacionesCount = Number.parseInt(habitacionesCheck.rows[0].count)
-
-    if (habitacionesCount === 0) {
-      const habitaciones = [
-        { tipo: "Individual", numero: 101, precio_por_noche: 120, disponible: true },
-        { tipo: "Individual", numero: 102, precio_por_noche: 120, disponible: true },
-        { tipo: "Doble", numero: 201, precio_por_noche: 180, disponible: true },
-        { tipo: "Doble", numero: 202, precio_por_noche: 180, disponible: true },
-        { tipo: "Suite Ejecutiva", numero: 301, precio_por_noche: 280, disponible: true },
-        { tipo: "Suite Ejecutiva", numero: 302, precio_por_noche: 280, disponible: true },
-      ]
-
-      for (const habitacion of habitaciones) {
-        await pool.query(
-          "INSERT INTO habitaciones (tipo, numero, precio_por_noche, disponible) VALUES ($1, $2, $3, $4)",
-          [habitacion.tipo, habitacion.numero, habitacion.precio_por_noche, habitacion.disponible],
-        )
-      }
-
-      console.log("✅ Habitaciones por defecto creadas")
-    }
-  } catch (error) {
-    console.error("❌ Error al crear habitaciones por defecto:", error)
-  }
-}
-
-// Ejecutar inicialización al arrancar el servidor
-pool
-  .connect()
-  .then(() => {
-    console.log("✅ Conexión exitosa a PostgreSQL")
-    return crearAdministradoresDefault()
-  })
-  .then(() => {
-    return inicializarHabitaciones()
-  })
-  .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
-
-// ==================== RUTAS DE ADMINISTRACIÓN ====================
-
-// Middleware para verificar si el usuario es administrador
-function verificarAdmin(req, res, next) {
-  const { email } = req.body
-
-  if (!email || !isAdminEmail(email)) {
-    return res.status(403).json({
-      success: false,
-      message: "Acceso denegado. Se requieren permisos de administrador.",
-    })
-  }
-
-  next()
-}
-
-// Ruta para obtener estadísticas generales
-app.get("/admin/estadisticas", async (req, res) => {
-  try {
-    // Total de usuarios (excluyendo administradores)
-    const totalUsuarios = await pool.query("SELECT COUNT(*) FROM usuarios WHERE correo NOT LIKE ANY($1)", [
-      ADMIN_EMAILS.concat(["%@admin.hotelituss.com"]),
-    ])
-
-    // Total de reservas
-    const totalReservas = await pool.query("SELECT COUNT(*) FROM reservas")
-
-    // Reservas activas (confirmadas y pendientes)
-    const reservasActivas = await pool.query(
-      "SELECT COUNT(*) FROM reservas WHERE estado IN ('confirmada', 'pendiente', 'pendiente_pago')",
-    )
-
-    // Ingresos del mes actual
-    const fechaActual = new Date()
-    const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1)
-    const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0)
-
-    // Calcular ingresos basado en reservas confirmadas del mes
-    const ingresosMes = await pool.query(
-      `
-      SELECT COALESCE(SUM(h.precio_por_noche * 
-        (EXTRACT(DAY FROM r.fecha_fin - r.fecha_inicio))), 0) as total
-      FROM reservas r
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      WHERE r.estado = 'confirmada' 
-      AND r.fecha_inicio >= $1 
-      AND r.fecha_inicio <= $2
-    `,
-      [primerDiaMes.toISOString().split("T")[0], ultimoDiaMes.toISOString().split("T")[0]],
-    )
-
-    res.json({
-      success: true,
-      estadisticas: {
-        totalUsuarios: Number.parseInt(totalUsuarios.rows[0].count),
-        totalReservas: Number.parseInt(totalReservas.rows[0].count),
-        reservasActivas: Number.parseInt(reservasActivas.rows[0].count),
-        ingresosMes: Number.parseFloat(ingresosMes.rows[0].total),
-      },
-    })
-  } catch (error) {
-    console.error("Error al obtener estadísticas:", error)
-    res.status(500).json({ success: false, message: "Error al obtener estadísticas" })
-  }
-})
-
-// Ruta para obtener todas las reservas (administradores)
-app.get("/admin/reservas", async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        r.*,
-        u.nombre as nombre_huesped,
-        u.correo as correo_huesped,
-        h.tipo as tipo_habitacion,
-        h.precio_por_noche,
-        (h.precio_por_noche * EXTRACT(DAY FROM r.fecha_fin - r.fecha_inicio)) as monto_total
-      FROM reservas r
-      JOIN usuarios u ON r.usuario_id = u.id
-      JOIN habitaciones h ON r.habitacion_id = h.id
-      ORDER BY r.fecha_inicio DESC
-    `
-
-    const result = await pool.query(query)
-
-    res.json({
-      success: true,
-      reservas: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener reservas para admin:", error)
-    res.status(500).json({ success: false, message: "Error al obtener reservas" })
-  }
-})
-
-// Ruta para obtener todos los usuarios (administradores)
-app.get("/admin/usuarios", async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        u.*,
-        COUNT(r.id) as total_reservas,
-        MAX(r.fecha_inicio) as ultima_reserva
-      FROM usuarios u
-      LEFT JOIN reservas r ON u.id = r.usuario_id
-      WHERE u.correo NOT LIKE ANY($1)
-      GROUP BY u.id, u.nombre, u.correo, u.telefono, u.contrasena
-      ORDER BY u.id DESC
-    `
-
-    const result = await pool.query(query, [ADMIN_EMAILS.concat(["%@admin.hotelituss.com"])])
-
-    res.json({
-      success: true,
-      usuarios: result.rows,
-    })
-  } catch (error) {
-    console.error("Error al obtener usuarios para admin:", error)
-    res.status(500).json({ success: false, message: "Error al obtener usuarios" })
-  }
-})
-
-// Ruta para cancelar reserva (administradores)
-app.post("/admin/cancelar-reserva", async (req, res) => {
-  try {
-    const { reserva_id } = req.body
-
-    if (!reserva_id) {
-      return res.status(400).json({ success: false, message: "ID de reserva requerido" })
-    }
-
-    // Actualizar estado de la reserva
-    await pool.query("UPDATE reservas SET estado = 'cancelada' WHERE id = $1", [reserva_id])
-
-    res.json({
-      success: true,
-      message: "Reserva cancelada exitosamente",
-    })
-  } catch (error) {
-    console.error("Error al cancelar reserva (admin):", error)
-    res.status(500).json({ success: false, message: "Error al cancelar reserva" })
-  }
+  res.sendFile(path.join(__dirname, "public", "index.html"))
 })
 
 //Crear usuario
@@ -299,7 +59,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
@@ -355,7 +115,7 @@ app.post("/verify-code", async (req, res) => {
   res.json({ success: true })
 })
 
-//iniciar sesion - MODIFICADO PARA INCLUIR ROL
+//iniciar sesion
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
   console.log("Headers:", req.headers)
@@ -378,13 +138,6 @@ app.post("/sesion", async (req, res) => {
       return res.status(401).json({ message: "Credenciales incorrectas" })
     }
 
-    const usuario = result.rows[0]
-
-    // Determinar el rol del usuario
-    const rol = isAdminEmail(usuario.correo) ? "administrador" : "usuario"
-
-    console.log(`Usuario ${usuario.correo} identificado como: ${rol}`)
-
     // Para solicitudes de formulario tradicionales
     if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
       return res.redirect("https://hotelituss-test.vercel.app/?logged=true")
@@ -396,10 +149,9 @@ app.post("/sesion", async (req, res) => {
       message: "Login exitoso",
       redirectUrl: "https://hotelituss-test.vercel.app/?logged=true",
       user: {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        correo: usuario.correo,
-        rol: rol, // Incluir el rol determinado dinámicamente
+        id: result.rows[0].id,
+        nombre: result.rows[0].nombre,
+        correo: result.rows[0].correo,
       },
     })
   } catch (error) {
@@ -826,19 +578,30 @@ app.post("/get-user-data", async (req, res) => {
       return res.status(404).json({ success: false, message: "Usuario no encontrado" })
     }
 
-    const usuario = result.rows[0]
-    const rol = isAdminEmail(usuario.correo) ? "administrador" : "usuario"
-
     res.status(200).json({
       success: true,
-      user: {
-        ...usuario,
-        rol: rol,
-      },
+      user: result.rows[0],
     })
   } catch (error) {
     console.error("Error al obtener datos del usuario:", error)
     res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Inicializar habitaciones si no existen - NO NECESARIO YA QUE TIENES TUS DATOS
+app.get("/init-habitaciones", async (req, res) => {
+  try {
+    // Verificar habitaciones existentes
+    const checkResult = await pool.query("SELECT * FROM habitaciones ORDER BY id")
+
+    res.status(200).json({
+      success: true,
+      message: "Habitaciones existentes en la base de datos",
+      habitaciones: checkResult.rows,
+    })
+  } catch (error) {
+    console.error("Error al consultar habitaciones:", error)
+    res.status(500).json({ success: false, message: "Error al consultar habitaciones" })
   }
 })
 
@@ -851,14 +614,15 @@ app.get("/status", (req, res) => {
     currency: "ARS",
     precios_desde_db: true,
     tabla_pagos: "habilitada",
-    admin_panel: "habilitado",
-    admin_emails: ADMIN_EMAILS,
     timestamp: new Date().toISOString(),
   })
 })
 
+pool
+  .connect()
+  .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
+  .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
+
 app.listen(3000)
 console.log("🚀 Servidor iniciado en puerto 3000")
 console.log("💳 MercadoPago configurado con Access Token de prueba")
-console.log("👨‍💼 Panel de administración habilitado")
-console.log("📧 Correos de administrador configurados:", ADMIN_EMAILS)
