@@ -140,13 +140,14 @@ app.post("/sesion", async (req, res) => {
 
     // Para solicitudes de formulario tradicionales
     if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
-      return res.redirect("https://hotelituss1.vercel.app/?logged=true")
+      return res.redirect("https://hotelituss-test.vercel.app/?logged=true")
     }
 
     // Para solicitudes JSON
     return res.status(200).json({
       success: true,
       message: "Login exitoso",
+      redirectUrl: "https://hotelituss-test.vercel.app/?logged=true",
       user: {
         id: result.rows[0].id,
         nombre: result.rows[0].nombre,
