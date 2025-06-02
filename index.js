@@ -47,6 +47,50 @@ const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 })
 
+// Función para inicializar la tabla de administradores
+async function initializeAdminTable() {
+  try {
+    // Crear tabla de administradores si no existe
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS administradores (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        correo VARCHAR(100) UNIQUE NOT NULL,
+        contrasena TEXT NOT NULL,
+        rol VARCHAR(50) DEFAULT 'admin',
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // Verificar si ya existe un administrador
+    const adminExists = await pool.query("SELECT COUNT(*) FROM administradores")
+
+    if (Number.parseInt(adminExists.rows[0].count) === 0) {
+      // Crear administrador por defecto
+      await pool.query("INSERT INTO administradores (nombre, correo, contrasena, rol) VALUES ($1, $2, $3, $4)", [
+        "Administrador Principal",
+        "admin@hotelituss.com",
+        "admin123",
+        "super_admin",
+      ])
+
+      // Crear un segundo administrador
+      await pool.query("INSERT INTO administradores (nombre, correo, contrasena, rol) VALUES ($1, $2, $3, $4)", [
+        "María González",
+        "maria.admin@hotelituss.com",
+        "maria2024",
+        "admin",
+      ])
+
+      console.log("✅ Administradores creados:")
+      console.log("   - admin@hotelituss.com / admin123")
+      console.log("   - maria.admin@hotelituss.com / maria2024")
+    }
+  } catch (error) {
+    console.error("❌ Error al inicializar tabla de administradores:", error)
+  }
+}
+
 app.get("/", async (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"))
 })
@@ -59,7 +103,7 @@ app.post("/create", async (req, res) => {
 
   usuariosPendientes[correo] = { codigo, nombre, telefono, password }
 
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: "gmail",
     auth: {
       user: "infohotelituss@gmail.com",
@@ -115,7 +159,7 @@ app.post("/verify-code", async (req, res) => {
   res.json({ success: true })
 })
 
-//iniciar sesion
+//iniciar sesion - MODIFICADO PARA INCLUIR ADMINISTRADORES
 app.post("/sesion", async (req, res) => {
   console.log("Datos recibidos del login:", req.body)
   console.log("Headers:", req.headers)
@@ -130,9 +174,44 @@ app.post("/sesion", async (req, res) => {
 
     console.log(`Buscando usuario con email: ${email}`)
 
+    // Primero verificar si es administrador
+    const adminResult = await pool.query("SELECT * FROM administradores WHERE correo = $1 AND contrasena = $2", [
+      email,
+      password,
+    ])
+
+    if (adminResult.rows.length > 0) {
+      const admin = adminResult.rows[0]
+      console.log("Administrador encontrado:", admin.nombre)
+
+      // Para solicitudes de formulario tradicionales
+      if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
+        return res.redirect("https://hotelituss-test.vercel.app/?logged=true&admin=true")
+      }
+
+      // Para solicitudes JSON
+      return res.status(200).json({
+        success: true,
+        message: "Login de administrador exitoso",
+        isAdmin: true,
+        redirectUrl: "https://hotelituss-test.vercel.app/?logged=true&admin=true",
+        user: {
+          id: admin.id,
+          nombre: admin.nombre,
+          correo: admin.correo,
+          rol: admin.rol,
+          isAdmin: true,
+        },
+      })
+    }
+
+    // Si no es administrador, verificar usuarios normales
     const result = await pool.query("SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2", [email, password])
 
-    console.log("Resultado de búsqueda:", result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado")
+    console.log(
+      "Resultado de búsqueda usuario:",
+      result.rows.length > 0 ? "Usuario encontrado" : "Usuario no encontrado",
+    )
 
     if (result.rows.length === 0) {
       return res.status(401).json({ message: "Credenciales incorrectas" })
@@ -147,16 +226,158 @@ app.post("/sesion", async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login exitoso",
+      isAdmin: false,
       redirectUrl: "https://hotelituss-test.vercel.app/?logged=true",
       user: {
         id: result.rows[0].id,
         nombre: result.rows[0].nombre,
         correo: result.rows[0].correo,
+        isAdmin: false,
       },
     })
   } catch (error) {
     console.error("Error en login:", error)
     res.status(500).json({ message: "Error del servidor" })
+  }
+})
+
+// NUEVOS ENDPOINTS PARA ADMINISTRACIÓN
+
+// Endpoint para obtener todas las reservas con detalles (SOLO ADMIN)
+app.post("/admin/reservas", async (req, res) => {
+  try {
+    const { adminEmail } = req.body
+
+    // Verificar que sea administrador
+    const adminCheck = await pool.query("SELECT id FROM administradores WHERE correo = $1", [adminEmail])
+
+    if (adminCheck.rows.length === 0) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    const query = `
+      SELECT 
+        r.id,
+        r.fecha_inicio,
+        r.fecha_fin,
+        r.estado,
+        r.preference_id,
+        u.nombre as cliente_nombre,
+        u.correo as cliente_correo,
+        u.telefono as cliente_telefono,
+        h.tipo as habitacion_tipo,
+        h.precio_por_noche,
+        p.monto as monto_pagado,
+        p.fecha_pago,
+        CASE 
+          WHEN r.fecha_inicio <= CURRENT_DATE AND r.fecha_fin >= CURRENT_DATE THEN 'En curso'
+          WHEN r.fecha_inicio > CURRENT_DATE THEN 'Próxima'
+          WHEN r.fecha_fin < CURRENT_DATE THEN 'Finalizada'
+          ELSE 'Pendiente'
+        END as estado_estancia
+      FROM reservas r
+      JOIN usuarios u ON r.usuario_id = u.id
+      JOIN habitaciones h ON r.habitacion_id = h.id
+      LEFT JOIN pagos p ON r.id = p.reserva_id
+      ORDER BY r.fecha_inicio DESC
+    `
+
+    const result = await pool.query(query)
+
+    res.status(200).json({
+      success: true,
+      reservas: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener reservas para admin:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Endpoint para obtener todos los usuarios/clientes (SOLO ADMIN)
+app.post("/admin/usuarios", async (req, res) => {
+  try {
+    const { adminEmail } = req.body
+
+    // Verificar que sea administrador
+    const adminCheck = await pool.query("SELECT id FROM administradores WHERE correo = $1", [adminEmail])
+
+    if (adminCheck.rows.length === 0) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    const query = `
+      SELECT 
+        u.id,
+        u.nombre,
+        u.correo,
+        u.telefono,
+        COUNT(r.id) as total_reservas,
+        MAX(r.fecha_inicio) as ultima_reserva,
+        SUM(CASE WHEN r.estado = 'confirmada' THEN p.monto ELSE 0 END) as total_gastado,
+        CASE 
+          WHEN COUNT(r.id) = 0 THEN 'Sin reservas'
+          WHEN COUNT(CASE WHEN r.estado = 'confirmada' THEN 1 END) > 0 THEN 'Cliente activo'
+          ELSE 'Cliente potencial'
+        END as estado_cliente
+      FROM usuarios u
+      LEFT JOIN reservas r ON u.id = r.usuario_id
+      LEFT JOIN pagos p ON r.id = p.reserva_id
+      GROUP BY u.id, u.nombre, u.correo, u.telefono
+      ORDER BY total_reservas DESC, u.nombre ASC
+    `
+
+    const result = await pool.query(query)
+
+    res.status(200).json({
+      success: true,
+      usuarios: result.rows,
+    })
+  } catch (error) {
+    console.error("Error al obtener usuarios para admin:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
+  }
+})
+
+// Endpoint para obtener estadísticas del dashboard (SOLO ADMIN)
+app.post("/admin/estadisticas", async (req, res) => {
+  try {
+    const { adminEmail } = req.body
+
+    // Verificar que sea administrador
+    const adminCheck = await pool.query("SELECT id FROM administradores WHERE correo = $1", [adminEmail])
+
+    if (adminCheck.rows.length === 0) {
+      return res.status(403).json({ success: false, message: "Acceso denegado" })
+    }
+
+    // Obtener estadísticas
+    const totalUsuarios = await pool.query("SELECT COUNT(*) as count FROM usuarios")
+    const totalReservas = await pool.query("SELECT COUNT(*) as count FROM reservas")
+    const reservasActivas = await pool.query(
+      "SELECT COUNT(*) as count FROM reservas WHERE estado IN ('confirmada', 'pendiente_pago')",
+    )
+
+    // Ingresos del mes actual
+    const ingresosMes = await pool.query(`
+      SELECT COALESCE(SUM(p.monto), 0) as total 
+      FROM pagos p 
+      WHERE EXTRACT(MONTH FROM p.fecha_pago) = EXTRACT(MONTH FROM CURRENT_DATE)
+      AND EXTRACT(YEAR FROM p.fecha_pago) = EXTRACT(YEAR FROM CURRENT_DATE)
+    `)
+
+    res.status(200).json({
+      success: true,
+      estadisticas: {
+        totalUsuarios: Number.parseInt(totalUsuarios.rows[0].count),
+        totalReservas: Number.parseInt(totalReservas.rows[0].count),
+        reservasActivas: Number.parseInt(reservasActivas.rows[0].count),
+        ingresosMes: Number.parseFloat(ingresosMes.rows[0].total) || 0,
+      },
+    })
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error)
+    res.status(500).json({ success: false, message: "Error del servidor" })
   }
 })
 
@@ -614,15 +835,26 @@ app.get("/status", (req, res) => {
     currency: "ARS",
     precios_desde_db: true,
     tabla_pagos: "habilitada",
+    admin_system: "habilitado",
     timestamp: new Date().toISOString(),
   })
 })
 
-pool
-  .connect()
-  .then(() => console.log("✅ Conexión exitosa a PostgreSQL"))
-  .catch((err) => console.error("❌ Error al conectar con PostgreSQL:", err))
+// Inicializar la base de datos y el servidor
+async function initializeServer() {
+  try {
+    await pool.connect()
+    console.log("✅ Conexión exitosa a PostgreSQL")
 
-app.listen(3000)
-console.log("🚀 Servidor iniciado en puerto 3000")
-console.log("💳 MercadoPago configurado con Access Token de prueba")
+    await initializeAdminTable()
+
+    app.listen(3000)
+    console.log("🚀 Servidor iniciado en puerto 3000")
+    console.log("💳 MercadoPago configurado con Access Token de prueba")
+    console.log("👨‍💼 Sistema de administración habilitado")
+  } catch (error) {
+    console.error("❌ Error al inicializar servidor:", error)
+  }
+}
+
+initializeServer()
